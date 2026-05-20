@@ -1,0 +1,21 @@
+locale: en
+siteName: Ostra
+nav:
+  - label: Home
+    href: /
+  - label: Contact
+    href: /contact/
+  - label: Services
+    href: /services/hello/
+  - label: Static none
+    href: /modes/static-none/
+  - label: Static load
+    href: /modes/static-load/
+  - label: Server none
+    href: /modes/server-none/
+  - label: Server load
+    href: /modes/server-load/
+  - label: None load
+    href: /modes/none-load/
+  - label: Nederlands
+    href: /nl/
