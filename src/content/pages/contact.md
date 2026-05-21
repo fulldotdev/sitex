@@ -13,4 +13,4 @@ newsletter:
 
 This contact page is rendered from Markdown and a TSX layout.
 
-When this page uses `client: load`, the page body hydrates in the browser.
+Interactive components are hydrated only when they are listed in the Ostra plugin config.

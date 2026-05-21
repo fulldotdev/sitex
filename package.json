@@ -4,8 +4,8 @@
   "type": "module",
   "packageManager": "pnpm@11.1.2",
   "exports": {
-    "./config": "./framework/config.ts",
-    "./layout": "./framework/layout.ts",
+    "./pages": "./framework/pages.ts",
+    "./content": "./framework/content.ts",
     "./tsconfig": "./framework/tsconfig.base.json"
   },
   "pnpm": {
@@ -33,6 +33,10 @@
     "zod": "^4.1.5"
   },
   "devDependencies": {
+    "@babel/generator": "^7.29.1",
+    "@babel/parser": "^7.29.3",
+    "@babel/traverse": "^7.29.0",
+    "@babel/types": "^7.29.0",
     "@types/markdown-it": "^14.1.2",
     "@types/node": "^24.3.1",
     "@types/react": "^19.1.12",

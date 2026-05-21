@@ -1,22 +1,31 @@
-import { readFileSync } from "node:fs"
+import { readFile } from "node:fs/promises"
+import path from "node:path"
 
+import generateModule from "@babel/generator"
+import { parse } from "@babel/parser"
+import traverseModule from "@babel/traverse"
+import * as t from "@babel/types"
+import fg from "fast-glob"
 import type { Connect, Plugin, ViteDevServer } from "vite"
-import type { z } from "zod"
 
-import type { OstraConfig } from "./config"
 import { findRoute, getRoutes } from "./routes"
 
-const virtualLayoutsModuleId = "virtual:ostra-layouts"
-const resolvedVirtualLayoutsModuleId = `\0${virtualLayoutsModuleId}`
-const virtualShellModuleId = "virtual:ostra-shell"
-const resolvedVirtualShellModuleId = `\0${virtualShellModuleId}`
-
-export type OstraPlugin<
-  GlobalSchema extends z.ZodType,
-  PageTypes extends Record<string, { schema: z.ZodType; layout: any }>,
-> = Plugin & {
-  ostraConfig: OstraConfig<GlobalSchema, PageTypes>
+type Island = {
+  exportName: string
+  id: string
+  moduleId: string
 }
+
+const generateCode = (
+  "default" in generateModule ? generateModule.default : generateModule
+) as typeof generateModule
+const traverseAst = (
+  "default" in traverseModule ? traverseModule.default : traverseModule
+) as typeof traverseModule
+
+const virtualIslandsId = "virtual:ostra-islands"
+const resolvedVirtualIslandsId = `\0${virtualIslandsId}`
+const astroContentId = "astro:content"
 
 const isHtmlRequest = (req: Connect.IncomingMessage) => {
   if (!req.url || (req.method !== "GET" && req.method !== "HEAD")) return false
@@ -26,34 +35,55 @@ const isHtmlRequest = (req: Connect.IncomingMessage) => {
   return accept.includes("text/html") || accept.includes("*/*")
 }
 
-export function ostra<
-  GlobalSchema extends z.ZodType,
-  PageTypes extends Record<string, { schema: z.ZodType; layout: any }>,
->(
-  config: OstraConfig<GlobalSchema, PageTypes>
-): OstraPlugin<GlobalSchema, PageTypes> {
+export function ostra(): Plugin {
+  let root = process.cwd()
+  const islands = new Map<string, Island>()
+
   return {
     name: "ostra",
-    ostraConfig: config,
+    enforce: "pre",
 
-    resolveId(id) {
-      if (id === virtualLayoutsModuleId) {
-        return resolvedVirtualLayoutsModuleId
-      }
+    configResolved(config) {
+      root = config.root
+    },
 
-      if (id === virtualShellModuleId) {
-        return resolvedVirtualShellModuleId
+    async buildStart() {
+      islands.clear()
+
+      const files = await fg("src/**/*.tsx", {
+        cwd: root,
+        ignore: ["src/pages/examples/**"],
+        onlyFiles: true,
+      })
+
+      for (const file of files) {
+        const absoluteFile = path.join(root, file)
+        const code = await readFile(absoluteFile, "utf8")
+        collectIslands(code, absoluteFile, root, islands)
       }
     },
 
-    load(id) {
-      if (id === resolvedVirtualLayoutsModuleId) {
-        return createClientLayoutsModule(config)
-      }
+    resolveId(id) {
+      if (id === virtualIslandsId) return resolvedVirtualIslandsId
+      if (id === astroContentId) return path.join(root, "framework/content.ts")
+    },
 
-      if (id === resolvedVirtualShellModuleId) {
-        return createClientShellModule(config)
-      }
+    load(id) {
+      if (id !== resolvedVirtualIslandsId) return
+
+      const entries = Array.from(islands.values()).map((island) => {
+        return `${JSON.stringify(island.id)}: () => import(${JSON.stringify(
+          island.moduleId
+        )}).then((mod) => ({ default: mod[${JSON.stringify(island.exportName)}] }))`
+      })
+
+      return `export const islands = {${entries.join(",")}}`
+    },
+
+    transform(code, id) {
+      if (!id.endsWith(".tsx") || !code.includes("client:")) return
+
+      return transformClientDirectives(code, id, root, islands)
     },
 
     configureServer(server: ViteDevServer) {
@@ -65,7 +95,7 @@ export function ostra<
           }
 
           const url = req.url?.split("?")[0] ?? "/"
-          const routes = await getRoutes()
+          const routes = await getRoutes((id) => server.ssrLoadModule(id))
           const route = findRoute(routes, url)
 
           if (!route) {
@@ -77,9 +107,7 @@ export function ostra<
             const mod = await server.ssrLoadModule("/framework/render.tsx")
             const html = await mod.renderRoute(route, {
               assets: {
-                appScripts: ["/framework/app-client.tsx"],
-                pageScripts: ["/framework/page-client.tsx"],
-                shellScripts: ["/framework/shell-client.tsx"],
+                scripts: ["/framework/island-client.tsx"],
                 styles: ["/framework/styles.css"],
               },
             })
@@ -97,98 +125,206 @@ export function ostra<
     },
 
     handleHotUpdate(ctx) {
-      if (ctx.file.includes("/src/content/")) {
+      if (
+        ctx.file.includes("/src/pages/") ||
+        ctx.file.includes("/src/content/") ||
+        ctx.file.endsWith("/src/content.config.ts")
+      ) {
         ctx.server.ws.send({ type: "full-reload" })
       }
     },
-  } as OstraPlugin<GlobalSchema, PageTypes>
-}
-
-function createClientShellModule<
-  GlobalSchema extends z.ZodType,
-  PageTypes extends Record<string, { schema: z.ZodType; layout: any }>,
->(config: OstraConfig<GlobalSchema, PageTypes>) {
-  const imports = readViteConfigImports()
-  const shellName = config.shell.layout.name
-  const importPath = imports.get(shellName)
-
-  if (!importPath) {
-    throw new Error(
-      `Ostra could not find an import for shell layout "${shellName}" in vite.config.ts.`
-    )
   }
-
-  return [
-    `import __ostraShell from ${JSON.stringify(importPath)};`,
-    "export const shell = __ostraShell;",
-  ].join("\n")
 }
 
-function createClientLayoutsModule<
-  GlobalSchema extends z.ZodType,
-  PageTypes extends Record<string, { schema: z.ZodType; layout: any }>,
->(config: OstraConfig<GlobalSchema, PageTypes>) {
-  const imports = readViteConfigImports()
-  const layoutEntries = Object.entries(config.pages.types).map(
-    ([name, pageType], index) => {
-      const layoutName = pageType.layout.name
-      const importPath = imports.get(layoutName)
+function collectIslands(
+  code: string,
+  id: string,
+  root: string,
+  islands: Map<string, Island>
+) {
+  if (!code.includes("client:")) return
 
-      if (!importPath) {
-        throw new Error(
-          `Ostra could not find an import for layout "${layoutName}" in vite.config.ts.`
+  const ast = parse(code, {
+    sourceType: "module",
+    plugins: ["jsx", "typescript"],
+  })
+  const imports = readImports(ast, id, root)
+
+  traverseAst(ast, {
+    JSXElement(path) {
+      const opening = path.node.openingElement
+      const mode = readClientMode(opening)
+
+      if (!mode) return
+
+      const name = readElementName(opening.name)
+      const imported = name ? imports.get(name) : undefined
+
+      if (imported) islands.set(imported.id, imported)
+    },
+  })
+}
+
+function transformClientDirectives(
+  code: string,
+  id: string,
+  root: string,
+  islands: Map<string, Island>
+) {
+  const ast = parse(code, {
+    sourceType: "module",
+    plugins: ["jsx", "typescript"],
+  })
+  const imports = readImports(ast, id, root)
+  let changed = false
+
+  traverseAst(ast, {
+    JSXElement(path) {
+      const opening = path.node.openingElement
+      const mode = readClientMode(opening)
+
+      if (!mode) return
+
+      const name = readElementName(opening.name)
+      const imported = name ? imports.get(name) : undefined
+
+      if (!name || !imported) {
+        throw path.buildCodeFrameError(
+          "Ostra client directives currently require an imported component."
         )
       }
 
-      return {
-        name,
-        importName: `__ostraLayout${index}`,
-        importPath,
-      }
-    }
+      islands.set(imported.id, imported)
+
+      const props = t.objectExpression(
+        opening.attributes
+          .filter((attribute) => !isClientDirective(attribute))
+          .map((attribute) => jsxAttributeToObjectProperty(attribute))
+      )
+
+      path.replaceWith(
+        t.jsxElement(
+          t.jsxOpeningElement(
+            t.jsxIdentifier("OstraIsland"),
+            [
+              t.jsxAttribute(t.jsxIdentifier("component"), t.jsxExpressionContainer(t.identifier(name))),
+              t.jsxAttribute(t.jsxIdentifier("id"), t.stringLiteral(imported.id)),
+              t.jsxAttribute(t.jsxIdentifier("mode"), t.stringLiteral(mode)),
+              t.jsxAttribute(t.jsxIdentifier("props"), t.jsxExpressionContainer(props)),
+            ],
+            false
+          ),
+          t.jsxClosingElement(t.jsxIdentifier("OstraIsland")),
+          path.node.children
+        )
+      )
+      path.skip()
+      changed = true
+    },
+  })
+
+  if (!changed) return
+
+  ast.program.body.unshift(
+    t.importDeclaration(
+      [t.importSpecifier(t.identifier("OstraIsland"), t.identifier("OstraIsland"))],
+      t.stringLiteral("/framework/island")
+    )
   )
 
-  return [
-    ...layoutEntries.map(
-      (entry) => `import ${entry.importName} from ${JSON.stringify(entry.importPath)};`
-    ),
-    "export const layouts = {",
-    ...layoutEntries.map(
-      (entry) => `  ${JSON.stringify(entry.name)}: ${entry.importName},`
-    ),
-    "};",
-  ].join("\n")
+  return generateCode(ast, {}, code).code
 }
 
-function readViteConfigImports() {
-  const source = readFileSync("vite.config.ts", "utf8")
-  const imports = new Map<string, string>()
-  const importPattern = /^import\s+(.+?)\s+from\s+["'](.+)["'];$/gm
+function readImports(
+  ast: t.File,
+  id: string,
+  root: string
+): Map<string, Island> {
+  const imports = new Map<string, Island>()
 
-  for (const match of source.matchAll(importPattern)) {
-    const clause = match[1]?.trim()
-    const sourcePath = match[2]
+  for (const node of ast.program.body) {
+    if (!t.isImportDeclaration(node)) continue
 
-    if (!clause || !sourcePath?.startsWith("./src/")) continue
-
-    const importPath = sourcePath.replace(/^\./, "")
-    const defaultImport = clause.match(/^([A-Za-z_$][\w$]*)/)
-
-    if (defaultImport) {
-      imports.set(defaultImport[1], importPath)
-    }
-
-    const namedImportBlock = clause.match(/\{([^}]+)\}/)
-
-    if (namedImportBlock) {
-      for (const namedImport of namedImportBlock[1].split(",")) {
-        const [imported, local = imported] = namedImport
-          .trim()
-          .split(/\s+as\s+/)
-        imports.set(local.trim(), importPath)
+    for (const specifier of node.specifiers) {
+      if (!t.isImportSpecifier(specifier) && !t.isImportDefaultSpecifier(specifier)) {
+        continue
       }
+
+      const exportName = t.isImportDefaultSpecifier(specifier)
+        ? "default"
+        : t.isIdentifier(specifier.imported)
+          ? specifier.imported.name
+          : specifier.imported.value
+      const moduleId = normalizeModuleId(node.source.value, id, root)
+      const island = {
+        exportName,
+        id: `${moduleId}:${exportName}`,
+        moduleId,
+      }
+
+      imports.set(specifier.local.name, island)
     }
   }
 
   return imports
+}
+
+function normalizeModuleId(source: string, importer: string, root: string) {
+  if (path.isAbsolute(source)) {
+    return `/${path.relative(root, source).replaceAll(path.sep, "/")}`
+  }
+
+  if (!source.startsWith(".")) return source
+
+  const absolute = path.resolve(path.dirname(importer), source)
+  const withExtension = path.extname(absolute) ? absolute : `${absolute}.tsx`
+
+  return `/${path.relative(root, withExtension).replaceAll(path.sep, "/")}`
+}
+
+function readClientMode(node: t.JSXOpeningElement) {
+  for (const attribute of node.attributes) {
+    if (!t.isJSXAttribute(attribute) || !t.isJSXNamespacedName(attribute.name)) {
+      continue
+    }
+
+    if (attribute.name.namespace.name !== "client") continue
+
+    if (attribute.name.name.name === "load") return "load"
+    if (attribute.name.name.name === "only") return "only"
+  }
+}
+
+function isClientDirective(attribute: t.JSXAttribute | t.JSXSpreadAttribute) {
+  return (
+    t.isJSXAttribute(attribute) &&
+    t.isJSXNamespacedName(attribute.name) &&
+    attribute.name.namespace.name === "client"
+  )
+}
+
+function readElementName(name: t.JSXElement["openingElement"]["name"]) {
+  return t.isJSXIdentifier(name) ? name.name : undefined
+}
+
+function jsxAttributeToObjectProperty(attribute: t.JSXAttribute | t.JSXSpreadAttribute) {
+  if (t.isJSXSpreadAttribute(attribute)) {
+    return t.spreadElement(attribute.argument)
+  }
+
+  if (!t.isJSXIdentifier(attribute.name)) {
+    throw new Error("Ostra client directives only support plain JSX props.")
+  }
+
+  const key = t.identifier(attribute.name.name)
+
+  if (!attribute.value) return t.objectProperty(key, t.booleanLiteral(true))
+  if (t.isStringLiteral(attribute.value)) {
+    return t.objectProperty(key, t.stringLiteral(attribute.value.value))
+  }
+  if (t.isJSXExpressionContainer(attribute.value)) {
+    return t.objectProperty(key, attribute.value.expression as t.Expression)
+  }
+
+  throw new Error("Unsupported JSX prop value in Ostra client directive.")
 }

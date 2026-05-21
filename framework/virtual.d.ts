@@ -1,11 +1,28 @@
-declare module "virtual:ostra-layouts" {
-  import type * as React from "react"
+declare module "virtual:ostra-islands" {
+  import type { ComponentType } from "react"
 
-  export const layouts: Record<string, React.ComponentType<any>>
+  export const islands: Record<
+    string,
+    () => Promise<{ default: ComponentType<Record<string, unknown>> }>
+  >
 }
 
-declare module "virtual:ostra-shell" {
-  import type * as React from "react"
+declare namespace React {
+  interface Attributes {
+    "client:load"?: boolean
+    "client:only"?: boolean
+  }
+}
 
-  export const shell: React.ComponentType<any>
+declare module "astro:content" {
+  export {
+    defineCollection,
+    getCollection,
+    getEntry,
+    z,
+    type CollectionEntry,
+    type CollectionEntryReference,
+    type ContentData,
+    type GetCollectionFilter,
+  } from "./content"
 }

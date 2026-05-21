@@ -1,14 +1,14 @@
 import { z } from "zod"
 
-import type { ostraPlugin } from "../../vite.config"
-
+import { articleSchema } from "./layouts/article"
+import { homeSchema } from "./layouts/home"
 import { seoSchema } from "./layouts/shared"
 
-export const pageSchema = z.object({
+export const baseSchema = z.object({
   type: z.string(),
   seo: seoSchema,
 })
 
-export type PageData = z.infer<
-  (typeof ostraPlugin)["ostraConfig"]["pages"]["types"][keyof (typeof ostraPlugin)["ostraConfig"]["pages"]["types"]]["schema"]
->
+export const pageSchema = z.discriminatedUnion("type", [homeSchema, articleSchema])
+
+export type PageData = z.infer<typeof baseSchema>

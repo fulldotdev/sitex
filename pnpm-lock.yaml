@@ -42,6 +42,18 @@ importers:
         specifier: ^4.1.5
         version: 4.4.3
     devDependencies:
+      '@babel/generator':
+        specifier: ^7.29.1
+        version: 7.29.1
+      '@babel/parser':
+        specifier: ^7.29.3
+        version: 7.29.3
+      '@babel/traverse':
+        specifier: ^7.29.0
+        version: 7.29.0
+      '@babel/types':
+        specifier: ^7.29.0
+        version: 7.29.0
       '@types/markdown-it':
         specifier: ^14.1.2
         version: 14.1.2

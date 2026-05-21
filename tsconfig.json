@@ -1,4 +1,10 @@
 {
   "extends": "./framework/tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
+  },
   "include": ["framework", "src", "vite.config.ts"]
 }

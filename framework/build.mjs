@@ -13,9 +13,7 @@ await build({
     emptyOutDir: false,
     rollupOptions: {
       input: {
-        appClient: "framework/app-client.tsx",
-        pageClient: "framework/page-client.tsx",
-        shellClient: "framework/shell-client.tsx",
+        islandClient: "framework/island-client.tsx",
         styles: "framework/styles.css",
       },
     },
@@ -27,23 +25,18 @@ const manifest = JSON.parse(
 )
 
 const assets = {
-  appScripts: [manifest["framework/app-client.tsx"].file].map(
-    (file) => `/assets/${file}`
-  ),
-  pageScripts: [manifest["framework/page-client.tsx"].file].map(
-    (file) => `/assets/${file}`
-  ),
-  shellScripts: [manifest["framework/shell-client.tsx"].file].map(
-    (file) => `/assets/${file}`
-  ),
+  scripts: [
+    ...new Set([
+      ...(manifest["framework/island-client.tsx"]?.file
+        ? [manifest["framework/island-client.tsx"].file]
+        : []),
+    ]),
+  ].map((file) => `/assets/${file}`),
   styles: [
     ...new Set([
       ...(manifest["framework/styles.css"]?.file
         ? [manifest["framework/styles.css"].file]
         : []),
-      ...(manifest["framework/app-client.tsx"]?.css ?? []),
-      ...(manifest["framework/page-client.tsx"]?.css ?? []),
-      ...(manifest["framework/shell-client.tsx"]?.css ?? []),
     ]),
   ].map((file) => `/assets/${file}`),
 }
@@ -58,23 +51,9 @@ const server = await createServer({
 try {
   const { getRoutes } = await server.ssrLoadModule("/framework/routes.ts")
   const { renderRoute } = await server.ssrLoadModule("/framework/render.tsx")
-  const { readPage } = await server.ssrLoadModule("/framework/content.ts")
-  const { getPageOptions } = await server.ssrLoadModule(
-    "/framework/page-options.ts"
-  )
-  const routes = await getRoutes()
+  const routes = await getRoutes((id) => server.ssrLoadModule(id))
 
   for (const route of routes) {
-    const page = await readPage(route.file)
-    const options = getPageOptions(page.data.type)
-
-    if (options.output === "server") {
-      console.warn(
-        `Skipping ${route.path}: page type "${page.data.type}" uses output: "server".`
-      )
-      continue
-    }
-
     const html = await renderRoute(route, { assets })
     await writeHtml(route.path, html)
   }
