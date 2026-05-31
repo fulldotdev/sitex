@@ -30,8 +30,11 @@ export default function FolderStructurePage() {
   components/
     layouts/
       base.tsx
+      home.tsx
       doc.tsx
     blocks/
+      hero-1.tsx
+      features-1.tsx
       doc-1.tsx
       sidebar-1.tsx
     ui/
