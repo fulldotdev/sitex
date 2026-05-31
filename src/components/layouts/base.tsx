@@ -48,7 +48,7 @@ const global = {
     href: "/",
   },
   header: {
-    githubRepo: "sitex/sitex",
+    githubRepo: "fulldotdev/sitex",
     navigation: docsNavigation,
   },
   sidebar: {
