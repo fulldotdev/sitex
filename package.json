@@ -2,6 +2,14 @@
   "name": "@fulldotdev/sitex",
   "version": "0.1.0",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fulldotdev/sitex.git"
+  },
+  "homepage": "https://github.com/fulldotdev/sitex#readme",
+  "bugs": {
+    "url": "https://github.com/fulldotdev/sitex/issues"
+  },
   "publishConfig": {
     "access": "public"
   },
