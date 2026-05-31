@@ -1,35 +1,66 @@
-import { getEntry } from "ostra/content"
+import { Button } from "@/components/ui/button"
+import { Section, SectionContainer } from "@/components/ui/section"
+import { TypographyInlineCode } from "@/components/ui/typography"
+import Base from "@/components/layouts/base"
 
-import { Counter } from "../components/counter"
-import { Layout } from "../components/layout"
-import { globals } from "../content/globals"
-
-export const meta = {
-  title: "Home",
-}
-
-export default async function HomePage() {
-  const page = await getEntry("pages", "index")
-  const hero =
-    page?.data.type === "home"
-      ? page.data.hero
-      : {
-          title: meta.title,
-          description: "This page is rendered from a static file-based page component.",
-        }
-
+export default function HomePage() {
   return (
-    <Layout global={globals.en}>
-      <main className="mx-auto max-w-5xl px-6 py-16">
-        <h1 className="text-4xl font-semibold">{hero.title}</h1>
-        <p className="mt-4 max-w-2xl text-zinc-300">{hero.description}</p>
-        {page?.body ? (
-          <div className="mt-8 max-w-2xl text-zinc-300">{page.body}</div>
-        ) : null}
-        <div className="mt-10 rounded-lg border border-zinc-800 p-6">
-          <Counter client:load initialCount={0} />
-        </div>
-      </main>
-    </Layout>
+    <Base
+      title="Sitex"
+      description="A simpler React framework for building content sites."
+      path="/"
+    >
+      <Section className="py-12 sm:py-16">
+        <SectionContainer className="max-w-4xl gap-10">
+          <div className="flex max-w-3xl flex-col gap-5">
+            <h1 className="text-foreground text-4xl leading-tight font-semibold tracking-tight text-balance sm:text-5xl">
+              A simpler, Vite-based React framework for building fast websites
+              with local content.
+            </h1>
+            <p className="text-muted-foreground max-w-2xl text-base leading-7 text-balance">
+              Sitex renders your React routes to fast static HTML by default,
+              while island architecture lets you add browser interactivity
+              exactly where a page needs it.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            <Button render={<a href="/docs/" />}>Read the introduction</Button>
+          </div>
+
+          <div className="border-border mt-2 grid gap-6 border-t pt-10 text-sm sm:grid-cols-3">
+            <div className="flex flex-col gap-2">
+              <h2 className="text-foreground font-medium">
+                Zero bundle size by default
+              </h2>
+              <p className="text-muted-foreground leading-6">
+                Content routes ship as static HTML unless you explicitly add an
+                island.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <h2 className="text-foreground font-medium">
+                File-based routing
+              </h2>
+              <p className="text-muted-foreground leading-6">
+                Add plain TSX files under{" "}
+                <TypographyInlineCode>src/pages</TypographyInlineCode>. Sitex
+                maps them to URLs and keeps routing explicit.
+              </p>
+            </div>
+            <div className="flex flex-col gap-2">
+              <h2 className="text-foreground font-medium">
+                Interactive islands when needed
+              </h2>
+              <p className="text-muted-foreground leading-6">
+                Add client rendering at imported component boundaries with{" "}
+                <TypographyInlineCode>client:load</TypographyInlineCode> or{" "}
+                <TypographyInlineCode>client:only</TypographyInlineCode>.
+              </p>
+            </div>
+          </div>
+        </SectionContainer>
+      </Section>
+    </Base>
   )
 }

@@ -7,7 +7,7 @@ revisited later without rediscovering the same design decisions.
 
 `children:include` is intentionally disabled for now.
 
-The current Ostra island model is:
+The current Sitex island model is:
 
 ```tsx
 <Component client:load>
@@ -77,7 +77,7 @@ That made the framework harder to reason about while the core API is still
 settling. The performance default also becomes easier to misuse: one
 `children:include` can ship a much larger subtree to the browser.
 
-For the current Ostra use case, static children already solve the important
+For the current Sitex use case, static children already solve the important
 shell/layout case:
 
 ```tsx
@@ -121,10 +121,10 @@ With `children:include`:
 The prior implementation approach was:
 
 1. Detect `children:include` during the Vite transform.
-2. Strip Ostra directives from the original JSX subtree.
+2. Strip Sitex directives from the original JSX subtree.
 3. Generate a virtual module for that exact subtree.
-4. Register that virtual module in `virtual:ostra-islands`.
-5. Replace the original JSX with an `OstraIsland` pointing at the generated
+4. Register that virtual module in `virtual:sitex-islands`.
+5. Replace the original JSX with a `SitexIsland` pointing at the generated
    subtree island.
 
 Conceptually:
@@ -138,20 +138,20 @@ Conceptually:
 becomes:
 
 ```tsx
-<OstraIsland
-  component={__OstraTreeIsland0}
+<SitexIsland
+  component={__SitexTreeIsland0}
   id="/src/pages/examples.tsx:tree-0"
   mode="load"
   props={{}}
 />
 ```
 
-And Ostra registers a virtual module like:
+And Sitex registers a virtual module like:
 
 ```tsx
 import { Counter } from "/src/components/counter.tsx"
 
-export default function OstraTreeIsland() {
+export default function SitexTreeIsland() {
   return (
     <Counter initialCount={30}>
       <Counter initialCount={31} />
@@ -171,17 +171,17 @@ hydrateRoot(element, createElement(TreeIsland))
 
 The removed experiment touched:
 
-- `framework/plugin.ts`
-- `framework/virtual.d.ts`
+- `sitex/plugin.ts`
+- `sitex/virtual.d.ts`
 - `src/pages/examples.tsx`
 - `src/components/shared-counter.tsx`
 
 The important framework pieces were:
 
 - `TreeIsland` registry type
-- `virtual:ostra-tree:*` module IDs
+- `virtual:sitex-tree:*` module IDs
 - `createTreeIslandCode(...)`
-- `stripOstraDirectives(...)`
+- `stripSitexDirectives(...)`
 - `readChildrenInclude(...)`
 - `children:include` JSX typing
 

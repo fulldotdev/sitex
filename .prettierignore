@@ -1,0 +1,31 @@
+node_modules/
+dist/
+.vite/
+.sitex/
+.sitex-bench/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# lock files
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+# docs / generated content
+*.md
+*.mdx
+
+src/content/pages/**/*.md
+
+coverage/
+.nyc_output/
+
+.env
+.env.*
+
+.DS_Store
+*.log

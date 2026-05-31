@@ -1,17 +1,28 @@
+# dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# build output
 dist/
 .vite/
+.sitex/
+.sitex-bench/
 
+# local env files
 .env
 .env.*
 !.env.example
 
+# misc
 .DS_Store
+*.pem
 *.log
 
+# coverage
 coverage/
 .nyc_output/
 
+# ide
 .idea/
 .vscode/
-r

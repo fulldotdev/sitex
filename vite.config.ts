@@ -1,15 +1,9 @@
-import tailwindcss from "@tailwindcss/vite"
 import { defineConfig } from "vite"
-
-import { ostra } from "./framework/plugin"
+import { sitex } from "sitex/plugin"
+import tailwindcss from "@tailwindcss/vite"
+import react from "@vitejs/plugin-react"
 
 export default defineConfig({
   appType: "custom",
-  plugins: [ostra(), tailwindcss()],
-  resolve: {
-    alias: {
-      "@": "/src",
-    },
-    dedupe: ["react", "react-dom"],
-  },
+  plugins: [react(), sitex(), tailwindcss()],
 })

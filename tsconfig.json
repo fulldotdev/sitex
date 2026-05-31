@@ -1,10 +1,10 @@
 {
-  "extends": "./framework/tsconfig.base.json",
+  "extends": "./sitex/config/tsconfig.json",
+  "include": ["src/**/*", "sitex/**/*", "vite.config.ts"],
+  "exclude": ["dist"],
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
-      "@/*": ["src/*"]
+      "@/*": ["./src/*"]
     }
-  },
-  "include": ["framework", "src", "vite.config.ts"]
+  }
 }
