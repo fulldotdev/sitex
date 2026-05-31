@@ -26,11 +26,15 @@ const initialState: ThemeProviderState = {
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 function disableTransitionsTemporarily() {
+  const existingStyle = document.getElementById("disable-theme-transitions")
+  existingStyle?.remove()
+
   const style = document.createElement("style")
+  style.id = "disable-theme-transitions"
 
   style.appendChild(
     document.createTextNode(
-      "*, *::before, *::after { transition: none !important; }"
+      "*, *::before, *::after { transition: none !important; animation: none !important; }"
     )
   )
 
@@ -40,7 +44,9 @@ function disableTransitionsTemporarily() {
     void document.documentElement.offsetHeight
 
     requestAnimationFrame(() => {
-      style.remove()
+      requestAnimationFrame(() => {
+        style.remove()
+      })
     })
   }
 }

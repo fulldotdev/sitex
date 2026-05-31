@@ -20,6 +20,46 @@ type LayoutHeadProps = ComponentProps<"head"> & {
   children?: ReactNode
 }
 
+const themeInitScript = `
+(() => {
+  const storageKey = "vite-ui-theme";
+  const transitionStyleId = "disable-theme-transitions";
+
+  const disableTransitions = () => {
+    document.getElementById(transitionStyleId)?.remove();
+
+    const style = document.createElement("style");
+    style.id = transitionStyleId;
+    style.appendChild(
+      document.createTextNode(
+        "*, *::before, *::after { transition: none !important; animation: none !important; }"
+      )
+    );
+    document.head.appendChild(style);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        style.remove();
+      });
+    });
+  };
+
+  try {
+    const storedTheme = localStorage.getItem(storageKey) || "system";
+    const resolvedTheme =
+      storedTheme === "system"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : storedTheme;
+
+    disableTransitions();
+    document.documentElement.classList.toggle("dark", resolvedTheme === "dark");
+  } catch {
+  }
+})();
+`
+
 function Layout({ className, lang = "en", ...props }: ComponentProps<"html">) {
   return (
     <html
@@ -59,6 +99,7 @@ function LayoutHead({
   return (
     <head data-slot="layout-head" {...props}>
       <meta charSet="utf-8" />
+      <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
       <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
       {title ? <title>{title}</title> : null}
