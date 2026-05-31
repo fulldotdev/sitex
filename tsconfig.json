@@ -4,7 +4,11 @@
   "exclude": ["dist"],
   "compilerOptions": {
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@fulldotdev/sitex/island": ["./sitex/hydration/server.tsx"],
+      "@fulldotdev/sitex/plugin": ["./sitex/vite/plugin.ts"],
+      "@fulldotdev/sitex/tsconfig": ["./sitex/config/tsconfig.json"],
+      "@fulldotdev/sitex/virtual": ["./sitex/types/virtual.d.ts"]
     }
   }
 }

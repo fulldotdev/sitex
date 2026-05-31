@@ -7,7 +7,7 @@ SiteX renders React routes to static HTML by default. When a page needs browser 
 ## Install
 
 ```bash
-pnpm add sitex react react-dom vite @vitejs/plugin-react
+pnpm add @fulldotdev/sitex react react-dom vite @vitejs/plugin-react
 pnpm add -D typescript @types/react @types/react-dom
 ```
 
@@ -15,7 +15,7 @@ pnpm add -D typescript @types/react @types/react-dom
 
 ```ts
 import { defineConfig } from "vite"
-import { sitex } from "sitex/plugin"
+import { sitex } from "@fulldotdev/sitex/plugin"
 import react from "@vitejs/plugin-react"
 
 export default defineConfig({
@@ -28,7 +28,7 @@ export default defineConfig({
 
 ```json
 {
-  "extends": "sitex/tsconfig",
+  "extends": "@fulldotdev/sitex/tsconfig",
   "include": ["src/**/*", "vite.config.ts"]
 }
 ```

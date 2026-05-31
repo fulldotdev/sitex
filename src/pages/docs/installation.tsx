@@ -50,7 +50,7 @@ extend the SiteX TypeScript config, add the scripts, and create the first route.
       </p>
       <CodeBlock
         lang="bash"
-        code={`pnpm add sitex react react-dom vite @vitejs/plugin-react
+        code={`pnpm add @fulldotdev/sitex react react-dom vite @vitejs/plugin-react
 pnpm add -D typescript @types/react @types/react-dom`}
       />
 
@@ -63,7 +63,7 @@ pnpm add -D typescript @types/react @types/react-dom`}
       <CodeBlock
         lang="ts"
         code={`import { defineConfig } from "vite"
-import { sitex } from "sitex/plugin"
+import { sitex } from "@fulldotdev/sitex/plugin"
 import react from "@vitejs/plugin-react"
 
 export default defineConfig({
@@ -80,7 +80,7 @@ export default defineConfig({
       <CodeBlock
         lang="json"
         code={`{
-  "extends": "sitex/tsconfig",
+  "extends": "@fulldotdev/sitex/tsconfig",
   "include": ["src/**/*", "vite.config.ts"],
   "exclude": ["dist"],
   "compilerOptions": {

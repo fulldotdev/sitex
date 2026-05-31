@@ -122,7 +122,7 @@ export function transformClientDirectives(
           t.identifier("SitexIsland")
         ),
       ],
-      t.stringLiteral("sitex/island")
+      t.stringLiteral("@fulldotdev/sitex/island")
     )
   )
 
