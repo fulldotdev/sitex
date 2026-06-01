@@ -50,9 +50,13 @@ extend the SiteX TypeScript config, add the scripts, and create the first route.
       </p>
       <CodeBlock
         lang="bash"
-        code={`pnpm add --allow-build=esbuild @fulldotdev/sitex react react-dom vite @vitejs/plugin-react
+        code={`pnpm add @fulldotdev/sitex react react-dom vite @vitejs/plugin-react
 pnpm add -D typescript @types/react @types/react-dom`}
       />
+      <p>
+        If pnpm asks about dependency build scripts, approve the packages your
+        project trusts in your workspace configuration.
+      </p>
 
       <h2 id="vite-config">Vite config</h2>
       <p>
