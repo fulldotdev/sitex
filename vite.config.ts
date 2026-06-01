@@ -1,7 +1,8 @@
 import { defineConfig } from "vite"
-import { sitex } from "@fulldotdev/sitex/plugin"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
+
+import { sitex } from "./sitex/vite/plugin"
 
 export default defineConfig({
   appType: "custom",

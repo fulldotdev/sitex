@@ -38,7 +38,7 @@ export default function InstallationPage() {
       </p>
       <CodeBlock
         lang="text"
-        code={`Read https://sitex.dev/docs/installation and install SiteX in this project.
+        code={`Read https://sitex.full.dev/docs/installation/ and install SiteX in this project.
 Follow the manual install steps on that page: install the package, add the Vite plugin,
 extend the SiteX TypeScript config, add the scripts, and create the first route.`}
       />
@@ -50,7 +50,7 @@ extend the SiteX TypeScript config, add the scripts, and create the first route.
       </p>
       <CodeBlock
         lang="bash"
-        code={`pnpm add @fulldotdev/sitex react react-dom vite @vitejs/plugin-react
+        code={`pnpm add --allow-build=esbuild @fulldotdev/sitex react react-dom vite @vitejs/plugin-react
 pnpm add -D typescript @types/react @types/react-dom`}
       />
 

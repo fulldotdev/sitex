@@ -28,7 +28,8 @@ import {
 import { findRoute, getRoutes } from "../router/routes.ts"
 
 const packageRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
-const islandClientInput = normalizePath(packageFile("hydration/client.tsx"))
+const packageSourceExtension = path.extname(fileURLToPath(import.meta.url))
+const islandClientInput = normalizePath(packageFile("hydration/client", "tsx"))
 
 const isHtmlRequest = (req: Connect.IncomingMessage) => {
   if (!req.url || (req.method !== "GET" && req.method !== "HEAD")) return false
@@ -134,11 +135,11 @@ function sitexPlugin(): Plugin {
 
           try {
             const mod = await server.ssrLoadModule(
-              packageFile("router/index.tsx")
+              packageFile("router/index", "tsx")
             )
             const html = await mod.renderRouteHtml(route, {
               assetTags: renderStylesheetTags(cssInputs),
-              islandClientSrc: devServerFileUrl("hydration/client.tsx"),
+              islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
             })
             const transformed = await server.transformIndexHtml(url, html)
 
@@ -214,10 +215,10 @@ async function writeStaticHtml(root: string, cssInputs: string[]) {
 
   try {
     const { getRoutes } = await server.ssrLoadModule(
-      packageFile("router/routes.ts")
+      packageFile("router/routes", "ts")
     )
     const { renderRouteHtml } = await server.ssrLoadModule(
-      packageFile("router/index.tsx")
+      packageFile("router/index", "tsx")
     )
     const routes = await getRoutes((id: string) => server.ssrLoadModule(id))
 
@@ -327,12 +328,14 @@ function resolveCssImport(root: string, importer: string, source: string) {
   return path.resolve(path.dirname(importer), source)
 }
 
-function packageFile(file: string) {
-  return path.join(packageRoot, file)
+function packageFile(file: string, sourceExtension: "ts" | "tsx") {
+  const extension = packageSourceExtension === ".js" ? "js" : sourceExtension
+
+  return path.join(packageRoot, `${file}.${extension}`)
 }
 
-function devServerFileUrl(file: string) {
-  return `/@fs/${packageFile(file).replaceAll(path.sep, "/")}`
+function devServerFileUrl(file: string, sourceExtension: "ts" | "tsx") {
+  return `/@fs/${packageFile(file, sourceExtension).replaceAll(path.sep, "/")}`
 }
 
 function normalizePath(file: string) {
