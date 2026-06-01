@@ -7,9 +7,12 @@ SiteX renders React routes to static HTML by default. When a page needs browser 
 ## Install
 
 ```bash
-pnpm add --allow-build=esbuild @fulldotdev/sitex react react-dom vite @vitejs/plugin-react
+pnpm add @fulldotdev/sitex react react-dom vite @vitejs/plugin-react
 pnpm add -D typescript @types/react @types/react-dom
 ```
+
+If pnpm asks about dependency build scripts, approve the packages your project
+trusts in your workspace configuration.
 
 ## Vite
 
