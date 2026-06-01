@@ -5,6 +5,7 @@ node_modules/
 
 # build output
 dist/
+package-dist/
 .vite/
 .sitex/
 .sitex-bench/
