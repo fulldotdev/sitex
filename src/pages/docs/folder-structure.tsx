@@ -49,8 +49,8 @@ export default function FolderStructurePage() {
 
       <h2 id="pages-folder">pages folder for routing</h2>
       <p>
-        The only folder Sitex really cares about is <code>src/pages</code>.
-        Files in this folder become routes.
+        The only folder Sitex really cares about is <code>src/pages</code>. It
+        contains the TSX files that become routes.
       </p>
       <ol>
         <li>
@@ -64,6 +64,10 @@ export default function FolderStructurePage() {
           <code>/docs/folder-structure</code>.
         </li>
       </ol>
+      <p>
+        Import CSS from routes, layouts, or components. SiteX uses Vite's build
+        graph to find the production CSS assets.
+      </p>
       <p>
         Keep route files thin. A route should choose a layout and pass content
         into it, not repeat the full page shell.

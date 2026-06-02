@@ -1,29 +1,10 @@
 import type { ReactNode } from "react"
-import fg from "fast-glob"
 
 export type PageLayout = () => ReactNode | Promise<ReactNode>
-
 export type Route = {
   file: string
   path: string
   layout: PageLayout
-}
-
-type LoadModule = (id: string) => Promise<unknown>
-
-export async function getRoutes(loadModule: LoadModule): Promise<Route[]> {
-  const files = await fg("src/pages/**/*.tsx", {
-    ignore: ["src/pages/examples/**"],
-    onlyFiles: true,
-  })
-  const routes: Route[] = []
-
-  for (const file of files) {
-    const module = await loadModule(`/${file}`)
-    routes.push(readStaticRoute(module, file))
-  }
-
-  return routes
 }
 
 export function findRoute(routes: Route[], url: string) {
@@ -31,7 +12,7 @@ export function findRoute(routes: Route[], url: string) {
   return routes.find((route) => normalizePath(route.path) === normalizedUrl)
 }
 
-function readStaticRoute(module: unknown, file: string): Route {
+export function readStaticRoute(module: unknown, file: string): Route {
   const pageModule = module as { default?: unknown }
   const component = pageModule.default
 

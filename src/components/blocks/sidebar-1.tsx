@@ -157,7 +157,7 @@ function Sidebar1({
                 <ExternalLinkIcon />
                 <span className="hidden sm:inline">GitHub</span>
               </Button>
-              <ThemeProvider defaultTheme="system" storageKey="vite-ui-theme">
+              <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
                 <ThemeToggle />
               </ThemeProvider>
             </HeaderGroup>

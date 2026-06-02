@@ -1,5 +1,13 @@
 # @fulldotdev/sitex
 
+## 0.1.3
+
+### Patch Changes
+
+- Discover route CSS through Vite's module graph instead of scanning source files with a regex, and inject the discovered production CSS into generated static HTML.
+
+- Simplify the docs layout shell and theme handling.
+
 ## 0.1.2
 
 ### Patch Changes

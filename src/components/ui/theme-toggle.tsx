@@ -2,7 +2,6 @@ import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 import { MoonIcon, SunIcon } from "lucide-react"
 
-import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 type Theme = "dark" | "light" | "system"
@@ -26,49 +25,19 @@ const initialState: ThemeProviderState = {
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
 function disableTransitionsTemporarily() {
-  const existingStyle = document.getElementById("disable-theme-transitions")
-  existingStyle?.remove()
-
   const style = document.createElement("style")
-  style.id = "disable-theme-transitions"
-
   style.appendChild(
-    document.createTextNode(
-      "*, *::before, *::after { transition: none !important; animation: none !important; }"
-    )
+    document.createTextNode("*,*::before,*::after{transition:none!important}")
   )
-
   document.head.appendChild(style)
 
-  return () => {
-    void document.documentElement.offsetHeight
+  window.getComputedStyle(document.body)
 
+  requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        style.remove()
-      })
+      style.remove()
     })
-  }
-}
-
-function resolveTheme(theme: Theme) {
-  if (theme !== "system") return theme
-
-  return window.matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light"
-}
-
-function applyTheme(theme: Theme, disableTransitions = false) {
-  const restoreTransitions = disableTransitions
-    ? disableTransitionsTemporarily()
-    : null
-
-  document.documentElement.classList[
-    resolveTheme(theme) === "dark" ? "add" : "remove"
-  ]("dark")
-
-  restoreTransitions?.()
+  })
 }
 
 export function ThemeProvider({
@@ -77,8 +46,6 @@ export function ThemeProvider({
   storageKey = "vite-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  if (!children) return null
-
   const [theme, setTheme] = useState<Theme>(() =>
     typeof window === "undefined"
       ? defaultTheme
@@ -86,7 +53,22 @@ export function ThemeProvider({
   )
 
   useEffect(() => {
-    applyTheme(theme)
+    const root = window.document.documentElement
+
+    disableTransitionsTemporarily()
+    root.classList.remove("light", "dark")
+
+    if (theme === "system") {
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
+        .matches
+        ? "dark"
+        : "light"
+
+      root.classList.add(systemTheme)
+      return
+    }
+
+    root.classList.add(theme)
   }, [theme])
 
   const value = {
@@ -94,7 +76,6 @@ export function ThemeProvider({
     setTheme: (theme: Theme) => {
       if (typeof window !== "undefined") {
         localStorage.setItem(storageKey, theme)
-        applyTheme(theme, true)
       }
 
       setTheme(theme)
@@ -120,32 +101,27 @@ export const useTheme = () => {
 type ThemeToggleProps = React.ComponentProps<typeof Button>
 
 export function ThemeToggle({
-  className,
-  variant = "ghost",
+  className = "relative",
+  variant = "outline",
   size = "icon-sm",
   ...props
 }: ThemeToggleProps) {
   const { theme, setTheme } = useTheme()
-  const isDark =
-    theme === "dark" ||
-    (theme === "system" &&
-      typeof window !== "undefined" &&
-      window.matchMedia("(prefers-color-scheme: dark)").matches)
+  const nextTheme = theme === "dark" ? "light" : "dark"
 
   return (
     <Button
       data-theme-toggle
       aria-label="Toggle theme"
-      aria-pressed={isDark}
-      data-state={isDark ? "on" : "off"}
-      onClick={() => setTheme(isDark ? "light" : "dark")}
-      variant={variant}
+      onClick={() => setTheme(nextTheme)}
       size={size}
-      className={cn("relative", className)}
+      type="button"
+      variant={variant}
+      className={className}
       {...props}
     >
-      <SunIcon className="dark:hidden" />
-      <MoonIcon className="hidden dark:block" />
+      <SunIcon className="size-4 scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90" />
+      <MoonIcon className="absolute size-4 scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0" />
       <span className="sr-only">Toggle theme</span>
     </Button>
   )
