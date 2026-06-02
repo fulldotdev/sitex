@@ -18,10 +18,9 @@ export default function PageRoutingPage() {
     >
       <h2 id="overview">Overview</h2>
       <p>
-        Sitex uses file-based routing. It scans <code>src/pages/**/*.tsx</code>
-        and creates one static route for each route file. This is the required
-        part of the folder structure explained in{" "}
-        <a href="/docs/folder-structure">Folder structure</a>.
+        Sitex uses file-based routing. TSX files in <code>src/pages</code>{" "}
+        become static routes. This is the required part of the folder structure
+        explained in <a href="/docs/folder-structure">Folder structure</a>.
       </p>
 
       <h2 id="route-files">Route files</h2>

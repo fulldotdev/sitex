@@ -1,5 +1,19 @@
 # @fulldotdev/sitex
 
+## 0.1.3
+
+### Patch Changes
+
+- Discover route CSS through Vite's module graph instead of scanning source files with a regex, and inject the discovered production CSS into generated static HTML.
+
+- Simplify the docs layout shell and theme handling.
+
+## 0.1.2
+
+### Patch Changes
+
+- [#4](https://github.com/fulldotdev/sitex/pull/4) [`a243305`](https://github.com/fulldotdev/sitex/commit/a243305c88d7cdcab1e394f7054dcdb791991c09) Thanks [@silveltman](https://github.com/silveltman)! - Remove pnpm build-script approval flags from the primary install command and document that build-script approvals belong in project package manager configuration.
+
 ## 0.1.1
 
 ### Patch Changes

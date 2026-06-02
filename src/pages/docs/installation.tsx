@@ -19,7 +19,7 @@ export default function InstallationPage() {
           { href: "#tsconfig", label: "TypeScript config" },
           { href: "#scripts", label: "Scripts" },
           { href: "#build-behavior", label: "Build behavior" },
-          { href: "#first-route", label: "First route" },
+          { href: "#first-page", label: "First page" },
         ],
       }}
     >
@@ -127,14 +127,15 @@ export default defineConfig({
         verify the same static files that will be deployed.
       </p>
       <p>
-        Styling uses normal Vite CSS imports. You do not need a SiteX-specific
-        CSS API or document helper for styles.
+        Import CSS from routes, layouts, or components. SiteX builds those files
+        with Vite and injects the production stylesheet links into generated
+        HTML.
       </p>
 
-      <h2 id="first-route">First route</h2>
+      <h2 id="first-page">First page</h2>
       <p>
-        Create <code>src/pages/index.tsx</code>. Files in <code>src/pages</code>{" "}
-        become static routes.
+        Create <code>src/pages/index.tsx</code>. Page files in{" "}
+        <code>src/pages</code> become static routes.
       </p>
       <CodeBlock
         lang="tsx"
@@ -143,6 +144,7 @@ export default defineConfig({
     <html lang="en">
       <head>
         <title>My SiteX site</title>
+        <meta name="description" content="My first SiteX page." />
       </head>
       <body>
         <h1>Hello from SiteX</h1>

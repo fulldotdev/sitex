@@ -1,13 +1,6 @@
 import type { ReactNode } from "react"
 
-import {
-  Layout,
-  LayoutBody,
-  LayoutHead,
-  LayoutMain,
-} from "@/components/ui/layout"
-
-import { Sidebar1 } from "../blocks/sidebar-1"
+import { Sidebar1 } from "@/components/blocks/sidebar-1"
 
 import "@/styles/globals.css"
 
@@ -41,7 +34,7 @@ export const docsNavigation = [
   },
 ]
 
-const global = {
+const site = {
   name: "Sitex Docs",
   logo: {
     label: "Sitex",
@@ -60,6 +53,45 @@ const global = {
     ],
   },
 }
+
+const themeInitScript = `
+(() => {
+  const storageKey = "vite-ui-theme";
+
+  const disableTransitions = () => {
+    const style = document.createElement("style");
+    style.appendChild(
+      document.createTextNode(
+        "*,*::before,*::after{transition:none!important}"
+      )
+    );
+    document.head.appendChild(style);
+
+    window.getComputedStyle(document.documentElement);
+
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        style.remove();
+      });
+    });
+  };
+
+  try {
+    const storedTheme = localStorage.getItem(storageKey) || "dark";
+    const resolvedTheme =
+      storedTheme === "system"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : storedTheme;
+
+    disableTransitions();
+    document.documentElement.classList.remove("light", "dark");
+    document.documentElement.classList.add(resolvedTheme);
+  } catch {
+  }
+})();
+`
 
 function normalizePath(path: string) {
   if (path === "/") return path
@@ -87,34 +119,53 @@ export default function Base({
   path = "/",
   children,
 }: BaseProps) {
-  const page = {
-    title,
-    description,
-    seo: {
-      title,
-      description,
-    },
-  }
   const breadcrumbItems = getPageBreadcrumbItems(path)
 
   return (
-    <Layout>
-      <LayoutHead {...global} {...page} {...page.seo} />
-      <LayoutBody>
+    <html
+      className="bg-background text-foreground has-data-[variant=inset]:bg-sidebar overscroll-none scroll-smooth"
+      data-slot="layout"
+      lang="en"
+    >
+      <head>
+        <meta charSet="utf-8" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: themeInitScript,
+          }}
+        />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <meta property="og:title" content={title} />
+        <meta property="og:description" content={description} />
+        <meta property="og:site_name" content={site.name} />
+        <meta property="og:type" content="website" />
+      </head>
+      <body
+        className="bg-background text-foreground overscroll-none antialiased"
+        data-slot="layout-body"
+      >
         <Sidebar1
-          logo={global.logo}
+          logo={site.logo}
           breadcrumb={{
             items: breadcrumbItems,
-            menu: global.header.navigation,
+            menu: site.header.navigation,
           }}
-          navigation={global.sidebar.navigation}
-          githubRepo={global.header.githubRepo}
+          navigation={site.sidebar.navigation}
+          githubRepo={site.header.githubRepo}
           path={path}
           client:load
         >
-          <LayoutMain>{children}</LayoutMain>
+          <main
+            className="@container flex flex-col in-data-[slot=sidebar-inset]:rounded-[inherit]"
+            data-slot="layout-main"
+          >
+            {children}
+          </main>
         </Sidebar1>
-      </LayoutBody>
-    </Layout>
+      </body>
+    </html>
   )
 }
