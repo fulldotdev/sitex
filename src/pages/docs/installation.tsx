@@ -48,11 +48,11 @@ extend the SiteX TypeScript config, add the scripts, and create the first route.
       <h2 id="manual-install">Manual install</h2>
       <p>
         Install the SiteX package together with the React and Vite packages your
-        app needs.
+        app needs. SiteX requires Vite 8 or newer.
       </p>
       <CodeBlock
         lang="bash"
-        code={`pnpm add @fulldotdev/sitex react react-dom vite @vitejs/plugin-react
+        code={`pnpm add @fulldotdev/sitex react react-dom vite@^8 @vitejs/plugin-react
 pnpm add -D typescript @types/react @types/react-dom`}
       />
       <p>
@@ -87,7 +87,7 @@ export default defineConfig({
         lang="json"
         code={`{
   "extends": "@fulldotdev/sitex/tsconfig",
-  "include": ["src/**/*", "vite.config.ts"],
+  "include": ["src/**/*", ".sitex/**/*.d.ts", "vite.config.ts"],
   "exclude": ["dist"],
   "compilerOptions": {
     "paths": {

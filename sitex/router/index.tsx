@@ -1,4 +1,4 @@
-import { renderToStaticMarkup } from "react-dom/server"
+import { prerender } from "react-dom/static"
 
 import type { Route } from "./routes.ts"
 
@@ -11,14 +11,18 @@ export async function renderRouteHtml(
   route: Route,
   options: RenderRouteHtmlOptions = {}
 ) {
-  let html = `<!doctype html>${renderToStaticMarkup(await route.layout())}`
+  const { prelude } = await prerender(await route.layout())
+  let html = `<!doctype html>${await new Response(prelude).text()}`
 
-  html = injectAssets(html, options)
+  html = injectRouteHtmlAssets(html, options)
 
   return html
 }
 
-function injectAssets(html: string, options: RenderRouteHtmlOptions) {
+export function injectRouteHtmlAssets(
+  html: string,
+  options: RenderRouteHtmlOptions
+) {
   const script =
     options.islandClientSrc && html.includes("data-sitex-island")
       ? `<script src="${options.islandClientSrc}" type="module"></script>`
@@ -43,8 +47,16 @@ function injectAssets(html: string, options: RenderRouteHtmlOptions) {
       )
     }
 
-    result = result.replace("</body>", `${script}</body>`)
+    result = replaceLast(result, "</body>", `${script}</body>`)
   }
 
   return result
+}
+
+function replaceLast(value: string, search: string, replacement: string) {
+  const index = value.lastIndexOf(search)
+
+  if (index === -1) return value
+
+  return `${value.slice(0, index)}${replacement}${value.slice(index + search.length)}`
 }

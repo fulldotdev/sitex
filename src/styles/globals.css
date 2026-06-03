@@ -72,6 +72,7 @@
 }
 
 :root {
+  color-scheme: light;
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
@@ -128,6 +129,7 @@
 }
 
 .dark {
+  color-scheme: dark;
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
@@ -533,44 +535,74 @@
   }
 
   [data-slot="typography"] > .docs-code-block {
-    @apply border-border bg-muted/60 relative overflow-hidden rounded-xl border;
+    @apply border-border bg-muted/40 relative overflow-hidden rounded-md border shadow-xs;
   }
 
-  [data-slot="typography"] > .docs-code-block > pre,
-  [data-slot="typography"] > .docs-code-block > pre.astro-code {
-    @apply m-0 rounded-none border-0 bg-transparent p-4 pr-14 text-sm leading-[var(--text-sm--line-height)];
+  [data-slot="typography"] .docs-code-block [data-slot="button"] {
+    @apply bg-background/70 absolute top-2 right-2 z-10 shadow-xs backdrop-blur;
+  }
+
+  [data-slot="typography"] > .docs-code-block > .docs-code-block-content {
+    @apply overflow-x-auto;
+  }
+
+  [data-slot="typography"] > .docs-code-block > .docs-code-block-content > pre,
+  [data-slot="typography"]
+    > .docs-code-block
+    > .docs-code-block-content
+    > pre.astro-code {
+    @apply m-0 min-w-max rounded-none border-0 bg-transparent p-4 pr-14 text-sm leading-[var(--text-sm--line-height)];
     font-family: var(--font-mono);
     background-color: transparent !important;
   }
 
-  [data-slot="typography"] > .docs-code-block > pre code,
-  [data-slot="typography"] > .docs-code-block > pre.astro-code code {
+  [data-slot="typography"]
+    > .docs-code-block
+    > .docs-code-block-content
+    > pre
+    code,
+  [data-slot="typography"]
+    > .docs-code-block
+    > .docs-code-block-content
+    > pre.astro-code
+    code {
     @apply text-sm leading-[var(--text-sm--line-height)];
     color: var(--shiki-light, var(--foreground));
   }
 
-  .dark [data-slot="typography"] > .docs-code-block > pre {
-    color: var(--shiki-dark, var(--foreground)) !important;
-  }
-
-  .dark [data-slot="typography"] > .docs-code-block > pre code,
-  .dark [data-slot="typography"] > .docs-code-block > pre.astro-code code {
+  .dark
+    [data-slot="typography"]
+    > .docs-code-block
+    > .docs-code-block-content
+    > pre {
     color: var(--shiki-dark, var(--foreground)) !important;
   }
 
   .dark
     [data-slot="typography"]
     > .docs-code-block
+    > .docs-code-block-content
+    > pre
+    code,
+  .dark
+    [data-slot="typography"]
+    > .docs-code-block
+    > .docs-code-block-content
+    > pre.astro-code
+    code {
+    color: var(--shiki-dark, var(--foreground)) !important;
+  }
+
+  .dark
+    [data-slot="typography"]
+    > .docs-code-block
+    > .docs-code-block-content
     > pre
     span[style*="--shiki-dark"] {
     color: var(--shiki-dark) !important;
     font-style: var(--shiki-dark-font-style, inherit) !important;
     font-weight: var(--shiki-dark-font-weight, inherit) !important;
     text-decoration: var(--shiki-dark-text-decoration, inherit) !important;
-  }
-
-  [data-slot="typography"] > .docs-code-block > .docs-code-copy {
-    @apply border-border bg-background text-muted-foreground hover:bg-accent hover:text-accent-foreground absolute top-3 right-3 z-10 inline-flex size-8 items-center justify-center rounded-md border shadow-sm transition-colors;
   }
 
   [data-slot="typography"] > .docs-code-block svg {

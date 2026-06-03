@@ -32,6 +32,7 @@ function Hero1({ title, description, buttons = [] }: Props) {
             {buttons.map((button) => (
               <Button
                 key={button.href}
+                nativeButton={false}
                 size="sm"
                 render={<a href={button.href} />}
               >

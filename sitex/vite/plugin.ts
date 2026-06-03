@@ -4,6 +4,8 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import type {
   Connect,
+  EnvironmentModuleGraph,
+  EnvironmentModuleNode,
   Manifest,
   Plugin,
   PluginOption,
@@ -12,9 +14,8 @@ import type {
   UserConfig,
   ViteDevServer,
 } from "vite"
-import { createServer } from "vite"
+import { createServer, isRunnableDevEnvironment, normalizePath } from "vite"
 import fg from "fast-glob"
-import tsconfigPaths from "vite-tsconfig-paths"
 
 import {
   collectHydrationEntries,
@@ -34,8 +35,6 @@ const virtualRoutesId = "virtual:sitex-routes"
 const resolvedVirtualRoutesId = `\0${virtualRoutesId}`
 const virtualRenderId = "virtual:sitex-render"
 const resolvedVirtualRenderId = `\0${virtualRenderId}`
-const virtualStyleCollectorId = "virtual:sitex-style-collector"
-const resolvedVirtualStyleCollectorId = `\0${virtualStyleCollectorId}`
 const virtualContentId = "sitex:content"
 const resolvedVirtualContentId = `\0${virtualContentId}`
 const contentTypesFile = ".sitex/content.d.ts"
@@ -72,7 +71,7 @@ function shouldGenerateContentTypes() {
 }
 
 export function sitex(): PluginOption[] {
-  return [tsconfigPaths(), sitexPlugin()]
+  return [sitexPlugin()]
 }
 
 function sitexPlugin(): Plugin {
@@ -84,18 +83,20 @@ function sitexPlugin(): Plugin {
     name: "sitex",
     enforce: "pre",
 
-    config(): UserConfig {
+    config(userConfig): UserConfig {
+      const configRoot = path.resolve(userConfig.root ?? process.cwd())
+
       return {
+        resolve: {
+          tsconfigPaths: true,
+        },
         build: {
           assetsDir: "assets",
           manifest: true,
           outDir: "dist",
           emptyOutDir: false,
-          rollupOptions: {
-            input: {
-              islandClient: islandClientInput,
-              sitexStyles: virtualStyleCollectorId,
-            },
+          rolldownOptions: {
+            input: createBuildInput(configRoot),
           },
         },
       }
@@ -126,44 +127,53 @@ function sitexPlugin(): Plugin {
       }
     },
 
-    resolveId(id) {
-      if (id === virtualHydrationId) return resolvedVirtualHydrationId
-      if (id === virtualRoutesId) return resolvedVirtualRoutesId
-      if (id === virtualRenderId) return resolvedVirtualRenderId
-      if (id === virtualStyleCollectorId) return resolvedVirtualStyleCollectorId
-      if (id === virtualContentId) return resolvedVirtualContentId
+    resolveId: {
+      filter: {
+        id: /^(virtual:sitex-islands|virtual:sitex-routes|virtual:sitex-render|sitex:content)$/,
+      },
+      handler(id) {
+        if (id === virtualHydrationId) return resolvedVirtualHydrationId
+        if (id === virtualRoutesId) return resolvedVirtualRoutesId
+        if (id === virtualRenderId) return resolvedVirtualRenderId
+        if (id === virtualContentId) return resolvedVirtualContentId
+      },
     },
 
-    async load(id) {
-      if (id === resolvedVirtualHydrationId) {
-        return createVirtualHydrationCode(hydration.values())
-      }
+    load: {
+      filter: {
+        id: /^(\0virtual:sitex-islands|\0virtual:sitex-routes|\0virtual:sitex-render|\0sitex:content)$/,
+      },
+      async handler(id) {
+        if (id === resolvedVirtualHydrationId) {
+          return createJavaScriptModule(
+            createVirtualHydrationCode(hydration.values())
+          )
+        }
 
-      if (id === resolvedVirtualRoutesId) {
-        return createVirtualRoutesCode(await collectRouteFiles(root))
-      }
+        if (id === resolvedVirtualRoutesId) {
+          return createJavaScriptModule(createVirtualRoutesCode())
+        }
 
-      if (id === resolvedVirtualRenderId) {
-        return createVirtualRenderCode()
-      }
+        if (id === resolvedVirtualRenderId) {
+          return createJavaScriptModule(createVirtualRenderCode())
+        }
 
-      if (id === resolvedVirtualStyleCollectorId) {
-        return createVirtualStyleCollectorCode(await collectRouteFiles(root))
-      }
-
-      if (id === resolvedVirtualContentId) {
-        return createContentModuleCode(await collectContentRoutes(root))
-      }
+        if (id === resolvedVirtualContentId) {
+          return createJavaScriptModule(createContentModuleCode())
+        }
+      },
     },
 
-    transform(code, id) {
-      if (!id.endsWith(".tsx") || !code.includes("client:")) return
+    transform: {
+      filter: {
+        id: /\.tsx$/,
+        code: "client:",
+      },
+      handler(code, id) {
+        if (!id.endsWith(".tsx") || !code.includes("client:")) return
 
-      return transformClientDirectives(code, id, root, hydration)
-    },
-
-    generateBundle(_options, bundle) {
-      pruneStyleCollectorBundle(bundle)
+        return transformClientDirectives(code, id, root, hydration)
+      },
     },
 
     configureServer(server: ViteDevServer) {
@@ -185,9 +195,16 @@ function sitexPlugin(): Plugin {
           const url = req.url?.split("?")[0] ?? "/"
 
           try {
-            await server.ssrLoadModule(virtualStyleCollectorId)
+            const { render } = await importServerModule(server, virtualRenderId)
+            const initialHtml = await render(url, {
+              islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
+            })
 
-            const { render } = await server.ssrLoadModule(virtualRenderId)
+            if (!initialHtml) {
+              next()
+              return
+            }
+
             const html = await render(url, {
               assetTags: renderStylesheetTags(readDevStylesheetHrefs(server)),
               islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
@@ -204,7 +221,6 @@ function sitexPlugin(): Plugin {
             res.setHeader("Content-Type", "text/html")
             res.end(req.method === "HEAD" ? undefined : transformed)
           } catch (error) {
-            server.ssrFixStacktrace(error as Error)
             next(error)
           }
         })
@@ -235,52 +251,56 @@ function sitexPlugin(): Plugin {
       }
     },
 
-    async handleHotUpdate(ctx) {
-      if (
-        ctx.file.includes("/src/pages/") ||
-        ctx.file.includes("/src/components/layouts/") ||
-        ctx.file.includes("/src/data/")
-      ) {
-        const routesModule = ctx.server.moduleGraph.getModuleById(
-          resolvedVirtualRoutesId
-        )
-        const renderModule = ctx.server.moduleGraph.getModuleById(
-          resolvedVirtualRenderId
-        )
-        const styleCollectorModule = ctx.server.moduleGraph.getModuleById(
-          resolvedVirtualStyleCollectorId
-        )
-        const contentModule = ctx.server.moduleGraph.getModuleById(
-          resolvedVirtualContentId
-        )
+    hotUpdate: {
+      async handler(options) {
+        const file = normalizePath(options.file)
 
-        if (routesModule) ctx.server.moduleGraph.invalidateModule(routesModule)
-        if (renderModule) ctx.server.moduleGraph.invalidateModule(renderModule)
-        if (styleCollectorModule) {
-          ctx.server.moduleGraph.invalidateModule(styleCollectorModule)
-        }
-        if (contentModule)
-          ctx.server.moduleGraph.invalidateModule(contentModule)
+        if (!shouldReloadForFile(file)) return
+
+        invalidateVirtualModules(
+          this.environment.moduleGraph,
+          options.timestamp
+        )
 
         if (
           shouldGenerateContentTypes() &&
-          (ctx.file.includes("/src/pages/") || ctx.file.includes("/src/data/"))
+          (file.includes("/src/pages/") || file.includes("/src/data/"))
         ) {
-          await writeContentTypesFromServer(root, ctx.server)
+          await writeContentTypesFromServer(root, options.server)
         }
 
-        ctx.server.ws.send({ type: "full-reload" })
+        this.environment.hot.send({ type: "full-reload" })
         return []
-      }
+      },
     },
 
     async writeBundle() {
       if (config.command !== "build") return
 
       await writeStaticHtml(root)
-      await pruneStyleCollectorOutput(root)
     },
   }
+}
+
+function createJavaScriptModule(code: string) {
+  return {
+    code,
+    moduleType: "js",
+  }
+}
+
+function createBuildInput(root: string) {
+  const input: Record<string, string> = {
+    islandClient: islandClientInput,
+  }
+
+  for (const file of collectStyleFilesSync(root)) {
+    const name = file.replace(/^src\//, "").replace(/\.css$/, "")
+
+    input[name] = normalizePath(path.join(root, file))
+  }
+
+  return input
 }
 
 async function writeStaticHtml(root: string) {
@@ -302,22 +322,28 @@ async function writeStaticHtml(root: string) {
       await writeContentTypesFromServer(root, server)
     }
 
-    const { getRoutes, render } = await server.ssrLoadModule(virtualRenderId)
+    const { getRoutes, injectRouteHtmlAssets, render } =
+      await importServerModule(server, virtualRenderId)
     const routes = await getRoutes()
 
     for (const route of routes) {
-      const html = await render(route.path, {
+      const html = await render(route.path)
+
+      if (!html) {
+        throw new Error(`Sitex could not render route "${route.path}".`)
+      }
+
+      const transformed = stripViteClientScript(
+        await server.transformIndexHtml(route.path, html)
+      )
+      const finalHtml = injectRouteHtmlAssets(transformed, {
         assetTags: stylesheetTags,
         islandClientSrc: islandClientAsset?.file
           ? publicAssetPath(islandClientAsset.file)
           : undefined,
       })
 
-      if (!html) {
-        throw new Error(`Sitex could not render route "${route.path}".`)
-      }
-
-      await writeHtml(root, route.path, html)
+      await writeHtml(root, route.path, finalHtml)
     }
   } finally {
     await server.close()
@@ -335,6 +361,13 @@ async function collectRouteFiles(root: string) {
   return fg("src/pages/**/*.tsx", {
     cwd: root,
     ignore: ["src/pages/examples/**"],
+    onlyFiles: true,
+  })
+}
+
+function collectStyleFilesSync(root: string) {
+  return fg.sync("src/**/*.css", {
+    cwd: root,
     onlyFiles: true,
   })
 }
@@ -367,7 +400,7 @@ async function collectContentPagesFromServer(
   const pages: ContentPage[] = []
 
   for (const route of routes) {
-    const module = (await server.ssrLoadModule(`/${route.file}`)) as {
+    const module = (await importServerModule(server, `/${route.file}`)) as {
       content?: unknown
     }
 
@@ -399,6 +432,45 @@ function formatContentTypeError(error: unknown) {
   return `[sitex] Could not generate content types: ${message}`
 }
 
+function shouldReloadForFile(file: string) {
+  return (
+    file.includes("/src/pages/") ||
+    file.includes("/src/components/") ||
+    file.includes("/src/data/")
+  )
+}
+
+function invalidateVirtualModules(
+  moduleGraph: EnvironmentModuleGraph,
+  timestamp: number
+) {
+  const invalidatedModules = new Set<EnvironmentModuleNode>()
+
+  for (const id of [
+    resolvedVirtualRoutesId,
+    resolvedVirtualRenderId,
+    resolvedVirtualContentId,
+  ]) {
+    const module = moduleGraph.getModuleById(id)
+
+    if (module) {
+      moduleGraph.invalidateModule(module, invalidatedModules, timestamp, true)
+    }
+  }
+}
+
+async function importServerModule(server: ViteDevServer, id: string) {
+  const environment = server.environments.ssr
+
+  if (!isRunnableDevEnvironment(environment)) {
+    throw new Error(
+      `Sitex requires a runnable Vite server environment to import "${id}".`
+    )
+  }
+
+  return environment.runner.import(id)
+}
+
 async function writeFileAtomic(file: string, content: string) {
   const temporaryFile = `${file}.${process.pid}.${randomUUID()}.tmp`
 
@@ -406,35 +478,45 @@ async function writeFileAtomic(file: string, content: string) {
   await rename(temporaryFile, file)
 }
 
-function createVirtualRoutesCode(files: string[]) {
-  const routeEntries = files.map((file) => {
-    return `{file:${JSON.stringify(file)},load:()=>import(${JSON.stringify(
-      `/${file}`
-    )})}`
-  })
-
+function createVirtualRoutesCode() {
   return [
     `import { readStaticRoute } from ${JSON.stringify(packageFile("router/routes", "ts"))}`,
-    `const routeModules = [${routeEntries.join(",")}]`,
+    `const routeModules = import.meta.glob("/src/pages/**/*.tsx")`,
+    `function isRouteFile(file) {`,
+    `  return !file.includes("/src/pages/examples/") && !/\\[[^\\]]+\\]/.test(file)`,
+    `}`,
     `export async function getRoutes() {`,
     `  const routes = []`,
-    `  for (const route of routeModules) {`,
-    `    routes.push(readStaticRoute(await route.load(), route.file))`,
+    `  for (const [file, load] of Object.entries(routeModules)) {`,
+    `    if (!isRouteFile(file)) continue`,
+    `    const routeFile = file.replace(/^\\/+/, "")`,
+    `    routes.push(readStaticRoute(await load(), routeFile))`,
     `  }`,
     `  return routes`,
     `}`,
   ].join("\n")
 }
 
-function createContentModuleCode(routes: ContentRoute[]) {
-  const routeMeta = routes.map((route) => ({
-    file: route.file,
-    path: route.path,
-  }))
-
+function createContentModuleCode() {
   return [
-    `const routeMeta = ${JSON.stringify(routeMeta)}`,
     `const contentModules = import.meta.glob("/src/pages/**/*.tsx", { import: "content" })`,
+    `function normalizeRoutePath(path) {`,
+    `  if (!path || path === "/") return "/"`,
+    `  return "/" + path.replace(/^\\/+|\\/+$/g, "")`,
+    `}`,
+    `function staticPageFileToPath(file) {`,
+    `  const route = file.replace(/^src\\/pages/, "").replace(/\\/index\\.tsx$/, "/").replace(/\\.tsx$/, "")`,
+    `  return normalizeRoutePath(route || "/")`,
+    `}`,
+    `function isRouteFile(file) {`,
+    `  return !file.includes("/src/pages/examples/") && !/\\[[^\\]]+\\]/.test(file)`,
+    `}`,
+    `const routeMeta = Object.keys(contentModules)`,
+    `  .filter(isRouteFile)`,
+    `  .map((file) => {`,
+    `    const routeFile = file.replace(/^\\/+/, "")`,
+    `    return { file: routeFile, path: staticPageFileToPath(routeFile) }`,
+    `  })`,
     `async function toPage(route) {`,
     `  const load = contentModules["/" + route.file]`,
     `  if (!load) return undefined`,
@@ -507,9 +589,9 @@ async function createContentTypesCode(pages: ContentPage[]) {
 function createVirtualRenderCode() {
   return [
     `import { getRoutes } from ${JSON.stringify(virtualRoutesId)}`,
-    `import { renderRouteHtml } from ${JSON.stringify(packageFile("router/index", "tsx"))}`,
+    `import { injectRouteHtmlAssets, renderRouteHtml } from ${JSON.stringify(packageFile("router/index", "tsx"))}`,
     `import { findRoute } from ${JSON.stringify(packageFile("router/routes", "ts"))}`,
-    `export { getRoutes }`,
+    `export { getRoutes, injectRouteHtmlAssets }`,
     `export async function render(url, options = {}) {`,
     `  const routes = await getRoutes()`,
     `  const route = findRoute(routes, url)`,
@@ -517,26 +599,6 @@ function createVirtualRenderCode() {
     `  return renderRouteHtml(route, options)`,
     `}`,
   ].join("\n")
-}
-
-function createVirtualStyleCollectorCode(files: string[]) {
-  return files.map((file) => `import ${JSON.stringify(`/${file}`)}`).join("\n")
-}
-
-function pruneStyleCollectorBundle(bundle: Record<string, unknown>) {
-  for (const [fileName, output] of Object.entries(bundle)) {
-    if (
-      typeof output === "object" &&
-      output !== null &&
-      "type" in output &&
-      output.type === "chunk" &&
-      "name" in output &&
-      output.name === "sitexStyles" &&
-      fileName.endsWith(".js")
-    ) {
-      delete bundle[fileName]
-    }
-  }
 }
 
 function routePathToHtmlFile(root: string, routePath: string) {
@@ -632,69 +694,6 @@ async function readManifest(root: string): Promise<Manifest> {
   return JSON.parse(await readFile(file, "utf8")) as Manifest
 }
 
-async function writeManifest(root: string, manifest: Manifest) {
-  const file = path.join(root, "dist/.vite/manifest.json")
-  await writeFile(file, `${JSON.stringify(manifest, null, 2)}\n`)
-}
-
-async function pruneStyleCollectorOutput(root: string) {
-  const manifest = await readManifest(root)
-  const styleKeys = Object.entries(manifest)
-    .filter(([, entry]) => entry.name === "sitexStyles")
-    .map(([key]) => key)
-
-  if (styleKeys.length === 0) return
-
-  const styleReachableKeys = collectManifestReferences(manifest, styleKeys)
-  const otherEntryKeys = Object.entries(manifest)
-    .filter(([, entry]) => entry.isEntry && entry.name !== "sitexStyles")
-    .map(([key]) => key)
-  const otherReachableKeys = collectManifestReferences(manifest, otherEntryKeys)
-  const prunedFiles: string[] = []
-
-  for (const key of styleReachableKeys) {
-    if (otherReachableKeys.has(key)) continue
-
-    const entry = manifest[key]
-
-    if (entry?.file?.endsWith(".js")) {
-      prunedFiles.push(entry.file)
-      delete manifest[key]
-    }
-  }
-
-  for (const file of prunedFiles) {
-    await rm(path.join(root, "dist", file), { force: true })
-    await rm(path.join(root, "dist", `${file}.map`), { force: true })
-  }
-
-  if (prunedFiles.length > 0) {
-    await writeManifest(root, manifest)
-  }
-}
-
-function collectManifestReferences(manifest: Manifest, keys: string[]) {
-  const references = new Set<string>()
-  const pending = [...keys]
-
-  for (const key of pending) {
-    if (references.has(key)) continue
-
-    references.add(key)
-
-    const entry = manifest[key]
-
-    for (const referencedKey of [
-      ...(entry?.imports ?? []),
-      ...(entry?.dynamicImports ?? []),
-    ]) {
-      pending.push(referencedKey)
-    }
-  }
-
-  return references
-}
-
 function readStylesheetAssets(manifest: Manifest) {
   const assets = new Set<string>()
 
@@ -727,6 +726,13 @@ function renderStylesheetTags(hrefs: string[]) {
   return hrefs.map((href) => `<link href="${href}" rel="stylesheet">`).join("")
 }
 
+function stripViteClientScript(html: string) {
+  return html.replace(
+    /<script\b[^>]*\bsrc=(["'])\/@vite\/client\1[^>]*>\s*<\/script>/g,
+    ""
+  )
+}
+
 function publicAssetPath(file: string) {
   return `/${file.replace(/^\/+/, "")}`
 }
@@ -743,8 +749,4 @@ function devServerFileUrl(file: string, sourceExtension: "ts" | "tsx") {
 
 function devServerFilePath(file: string) {
   return `/@fs/${file.replaceAll(path.sep, "/")}`
-}
-
-function normalizePath(file: string) {
-  return file.replaceAll(path.sep, "/")
 }

@@ -1,6 +1,6 @@
 {
   "extends": "./sitex/config/tsconfig.json",
-  "include": ["src/**/*", "sitex/**/*", "vite.config.ts"],
+  "include": ["src/**/*", "sitex/**/*", ".sitex/**/*.d.ts", "vite.config.ts"],
   "exclude": ["dist"],
   "compilerOptions": {
     "paths": {

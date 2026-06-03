@@ -76,6 +76,10 @@ function normalizePath(path: string) {
   return path.replace(/\/$/, "")
 }
 
+function toDomId(value: string) {
+  return value.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
+}
+
 function Sidebar1({
   className,
   logo,
@@ -101,9 +105,9 @@ function Sidebar1({
               size="lg"
               variant="default"
             >
-              <Logo>
-                <LogoText className="truncate">Site</LogoText>
-                <LogoImage aria-label="x" />
+              <Logo className="gap-2">
+                <LogoImage aria-label="x" className="size-6" />
+                <LogoText className="truncate">sitex</LogoText>
               </Logo>
             </SidebarMenuButton>
           </SidebarHeader>
@@ -148,6 +152,7 @@ function Sidebar1({
               <HeaderGroup className="gap-1">
                 <Button
                   aria-label={`View ${githubRepo} on GitHub`}
+                  nativeButton={false}
                   render={
                     <a
                       href={`https://github.com/${githubRepo}`}
@@ -218,6 +223,7 @@ function BreadcrumbTrail({
               <DropdownMenuTrigger
                 aria-label="Open page menu"
                 className="hover:text-foreground inline-flex items-center leading-none transition-colors"
+                id="breadcrumb-page-menu"
               >
                 <BreadcrumbEllipsis />
               </DropdownMenuTrigger>
@@ -270,6 +276,7 @@ function BreadcrumbFragment({
                 "hover:text-foreground inline-flex items-center gap-1 transition-colors",
                 isLast && "text-foreground"
               )}
+              id={`breadcrumb-menu-${toDomId(item.href)}`}
             >
               {item.label}
               <ChevronDownIcon className="size-3.5 opacity-70" aria-hidden />

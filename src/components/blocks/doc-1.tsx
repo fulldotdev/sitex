@@ -39,6 +39,7 @@ function DocPaginationPrevious({ page }: { page?: DocPageLink }) {
   return (
     <Button
       className="h-auto min-w-0 justify-start gap-2 px-3 py-2 whitespace-normal"
+      nativeButton={false}
       render={<a href={page.href} />}
       variant="outline"
     >
@@ -56,6 +57,7 @@ function DocPaginationNext({ page }: { page?: DocPageLink }) {
   return (
     <Button
       className="h-auto min-w-0 justify-end gap-2 px-3 py-2 text-right whitespace-normal"
+      nativeButton={false}
       render={<a href={page.href} />}
       variant="outline"
     >

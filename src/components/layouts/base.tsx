@@ -116,7 +116,7 @@ export default function Base({
           client:load
         >
           <main
-            className="@container flex flex-col in-data-[slot=sidebar-inset]:rounded-[inherit]"
+            className="@container flex min-h-0 flex-1 flex-col overflow-y-auto in-data-[slot=sidebar-inset]:rounded-[inherit]"
             data-slot="layout-main"
           >
             {children}

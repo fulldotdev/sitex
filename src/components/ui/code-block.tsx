@@ -7,6 +7,8 @@ import githubDark from "shiki/dist/themes/github-dark.mjs"
 import githubLight from "shiki/dist/themes/github-light.mjs"
 import { createJavaScriptRegexEngine } from "shiki/engine/javascript"
 
+import { CodeBlockCopyButton } from "@/components/ui/code-block-copy-button"
+
 const highlighter = await createHighlighterCore({
   langs: [bash, json, ts, tsx],
   themes: [githubLight, githubDark],
@@ -45,10 +47,13 @@ function CodeBlock({ code, lang }: CodeBlockProps) {
         })
 
   return (
-    <div
-      className="docs-code-block"
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <figure className="docs-code-block">
+      <CodeBlockCopyButton code={trimmedCode} client:load />
+      <div
+        className="docs-code-block-content"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    </figure>
   )
 }
 

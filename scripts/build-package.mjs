@@ -1,6 +1,6 @@
 import { rm } from "node:fs/promises"
 import { builtinModules, createRequire } from "node:module"
-import { build } from "esbuild"
+import { rolldown } from "rolldown"
 
 const require = createRequire(import.meta.url)
 const packageJson = require("../package.json")
@@ -10,25 +10,27 @@ const external = [
   ...builtinModules.map((module) => `node:${module}`),
   ...Object.keys(packageJson.dependencies ?? {}),
   ...Object.keys(packageJson.peerDependencies ?? {}),
-  "virtual:*",
 ]
+const isExternal = (id) =>
+  external.some(
+    (dependency) => id === dependency || id.startsWith(`${dependency}/`)
+  ) || id.startsWith("virtual:")
 
 await rm("package-dist", { recursive: true, force: true })
 
-await build({
-  entryPoints: [
-    "sitex/vite/plugin.ts",
-    "sitex/hydration/client.tsx",
-    "sitex/hydration/server.tsx",
-    "sitex/router/index.tsx",
-    "sitex/router/routes.ts",
-  ],
-  outbase: "sitex",
-  outdir: "package-dist",
-  bundle: true,
-  external,
+const bundle = await rolldown({
+  input: {
+    "vite/plugin": "sitex/vite/plugin.ts",
+    "hydration/client": "sitex/hydration/client.tsx",
+    "hydration/server": "sitex/hydration/server.tsx",
+    "router/index": "sitex/router/index.tsx",
+    "router/routes": "sitex/router/routes.ts",
+  },
+  external: isExternal,
+})
+
+await bundle.write({
+  dir: "package-dist",
+  entryFileNames: "[name].js",
   format: "esm",
-  jsx: "automatic",
-  platform: "neutral",
-  target: "es2022",
 })

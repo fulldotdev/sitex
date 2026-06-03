@@ -1,5 +1,5 @@
 import React, { type ComponentType, type ReactNode } from "react"
-import { renderToStaticMarkup } from "react-dom/server"
+import { prerender } from "react-dom/static"
 
 import {
   hydrationAttributes,
@@ -15,7 +15,13 @@ type Props = {
   children?: ReactNode
 }
 
-export function SitexIsland({
+async function renderStaticMarkup(node: ReactNode) {
+  const { prelude } = await prerender(node)
+
+  return new Response(prelude).text()
+}
+
+export async function SitexIsland({
   component: Component,
   id,
   mode,
@@ -23,7 +29,7 @@ export function SitexIsland({
   children,
 }: Props) {
   const serializedProps = serializeHydrationProps(props)
-  const staticChildrenHtml = children ? renderToStaticMarkup(children) : ""
+  const staticChildrenHtml = children ? await renderStaticMarkup(children) : ""
   const staticChildren = staticChildrenHtml ? (
     <div
       dangerouslySetInnerHTML={{ __html: staticChildrenHtml }}

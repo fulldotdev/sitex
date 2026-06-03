@@ -1,5 +1,3 @@
-/// <reference path="../../.sitex/content.d.ts" />
-
 declare module "virtual:sitex-islands" {
   import type { ComponentType } from "react"
 

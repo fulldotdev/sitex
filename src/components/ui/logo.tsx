@@ -35,9 +35,11 @@ function LogoImage({ className, ...props }: LogoImageProps) {
         viewBox="0 0 32 32"
         xmlns="http://www.w3.org/2000/svg"
       >
+        <rect width="32" height="32" rx="7" fill="#ff5e00" />
         <path
           d="M6.8 6.6 16 12.7l9.2-6.1-6.1 9.4 6.1 9.4-9.2-6.1-9.2 6.1 6.1-9.4z"
-          fill="currentColor"
+          fill="#ffffff"
+          transform="translate(16 16) scale(1.12) translate(-16 -16)"
         />
       </svg>
     </span>
