@@ -1,28 +1,31 @@
 import { CodeBlock } from "@/components/ui/code-block"
 import Doc from "@/components/layouts/doc"
 
+export const content = {
+  title: "Folder structure",
+  description:
+    "What Sitex requires and how we recommend organizing content sites.",
+  order: 6,
+  tocItems: [
+    { href: "#pages-folder", label: "pages folder for routing" },
+    {
+      href: "#components-folder",
+      label: "components folder recommendations",
+    },
+    { href: "#layouts", label: "layouts", depth: 3 },
+    { href: "#blocks", label: "blocks", depth: 3 },
+    { href: "#ui", label: "ui", depth: 3 },
+    { href: "#why-inline-content", label: "Why inline content" },
+  ],
+}
+
 export default function FolderStructurePage() {
   return (
     <Doc
-      title="Folder structure"
-      description="What Sitex requires and how we recommend organizing content sites."
+      title={content.title}
+      description={content.description}
       path="/docs/folder-structure"
-      doc={{
-        title: "Folder structure",
-        description:
-          "What Sitex requires and how we recommend organizing content sites.",
-        tocItems: [
-          { href: "#pages-folder", label: "pages folder for routing" },
-          {
-            href: "#components-folder",
-            label: "components folder recommendations",
-          },
-          { href: "#layouts", label: "layouts", depth: 3 },
-          { href: "#blocks", label: "blocks", depth: 3 },
-          { href: "#ui", label: "ui", depth: 3 },
-          { href: "#why-inline-content", label: "Why inline content" },
-        ],
-      }}
+      doc={content}
     >
       <CodeBlock
         lang="text"

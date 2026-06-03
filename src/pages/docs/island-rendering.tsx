@@ -1,22 +1,25 @@
 import { CodeBlock } from "@/components/ui/code-block"
 import Doc from "@/components/layouts/doc"
 
+export const content = {
+  title: "Island rendering",
+  description: "Client rendering with explicit island boundaries.",
+  order: 5,
+  tocItems: [
+    { href: "#overview", label: "Overview" },
+    { href: "#client-load", label: "client:load" },
+    { href: "#client-only", label: "client:only" },
+    { href: "#boundaries", label: "Boundaries" },
+  ],
+}
+
 export default function IslandRenderingPage() {
   return (
     <Doc
-      title="Island rendering"
-      description="Client rendering with explicit island boundaries."
+      title={content.title}
+      description={content.description}
       path="/docs/island-rendering"
-      doc={{
-        title: "Island rendering",
-        description: "Client rendering with explicit island boundaries.",
-        tocItems: [
-          { href: "#overview", label: "Overview" },
-          { href: "#client-load", label: "client:load" },
-          { href: "#client-only", label: "client:only" },
-          { href: "#boundaries", label: "Boundaries" },
-        ],
-      }}
+      doc={content}
     >
       <h2 id="overview">Overview</h2>
       <p>

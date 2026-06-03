@@ -1,20 +1,23 @@
 import Doc from "@/components/layouts/doc"
 
+export const content = {
+  title: "Page routing",
+  description: "Map TSX files in the pages folder to static routes.",
+  order: 3,
+  tocItems: [
+    { href: "#overview", label: "Overview" },
+    { href: "#route-files", label: "Route files" },
+    { href: "#index-routes", label: "Index routes" },
+  ],
+}
+
 export default function PageRoutingPage() {
   return (
     <Doc
-      title="Page routing"
-      description="Map TSX files in the pages folder to static routes."
+      title={content.title}
+      description={content.description}
       path="/docs/page-routing"
-      doc={{
-        title: "Page routing",
-        description: "Map TSX files in the pages folder to static routes.",
-        tocItems: [
-          { href: "#overview", label: "Overview" },
-          { href: "#route-files", label: "Route files" },
-          { href: "#index-routes", label: "Index routes" },
-        ],
-      }}
+      doc={content}
     >
       <h2 id="overview">Overview</h2>
       <p>

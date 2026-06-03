@@ -2,26 +2,28 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CodeBlock } from "@/components/ui/code-block"
 import Doc from "@/components/layouts/doc"
 
+export const content = {
+  title: "Installation",
+  description: "Install SiteX and add the Vite and TypeScript configuration.",
+  order: 2,
+  tocItems: [
+    { href: "#ai-agent-install", label: "AI agent install" },
+    { href: "#manual-install", label: "Manual install" },
+    { href: "#vite-config", label: "Vite config" },
+    { href: "#tsconfig", label: "TypeScript config" },
+    { href: "#scripts", label: "Scripts" },
+    { href: "#build-behavior", label: "Build behavior" },
+    { href: "#first-page", label: "First page" },
+  ],
+}
+
 export default function InstallationPage() {
   return (
     <Doc
-      title="Installation"
-      description="Install SiteX and add the Vite and TypeScript configuration."
+      title={content.title}
+      description={content.description}
       path="/docs/installation"
-      doc={{
-        title: "Installation",
-        description:
-          "Install SiteX and add the Vite and TypeScript configuration.",
-        tocItems: [
-          { href: "#ai-agent-install", label: "AI agent install" },
-          { href: "#manual-install", label: "Manual install" },
-          { href: "#vite-config", label: "Vite config" },
-          { href: "#tsconfig", label: "TypeScript config" },
-          { href: "#scripts", label: "Scripts" },
-          { href: "#build-behavior", label: "Build behavior" },
-          { href: "#first-page", label: "First page" },
-        ],
-      }}
+      doc={content}
     >
       <Alert className="border-primary/25 bg-primary/10 py-4 shadow-sm">
         <AlertTitle>Installing with an AI agent?</AlertTitle>

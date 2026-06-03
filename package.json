@@ -68,6 +68,7 @@
     "@babel/traverse": "^7.29.0",
     "@babel/types": "^7.29.0",
     "fast-glob": "^3.3.3",
+    "quicktype-core": "^23.2.6",
     "vite-tsconfig-paths": "^6.1.1"
   },
   "devDependencies": {

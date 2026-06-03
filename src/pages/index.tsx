@@ -1,19 +1,25 @@
 import { TypographyInlineCode } from "@/components/ui/typography"
 import Home from "@/components/layouts/home"
 
+export const content = {
+  title: "Sitex",
+  description: "A simpler React framework for building content sites.",
+  hero: {
+    title:
+      "A simpler, Vite-based React framework for building fast websites with local content.",
+    description:
+      "Sitex renders your React routes to fast static HTML by default, while island architecture lets you add browser interactivity exactly where a page needs it.",
+    buttons: [{ href: "/docs/", label: "Read the introduction" }],
+  },
+}
+
 export default function HomePage() {
   return (
     <Home
-      title="Sitex"
-      description="A simpler React framework for building content sites."
+      title={content.title}
+      description={content.description}
       path="/"
-      hero={{
-        title:
-          "A simpler, Vite-based React framework for building fast websites with local content.",
-        description:
-          "Sitex renders your React routes to fast static HTML by default, while island architecture lets you add browser interactivity exactly where a page needs it.",
-        buttons: [{ href: "/docs/", label: "Read the introduction" }],
-      }}
+      hero={content.hero}
       features={{
         features: [
           {

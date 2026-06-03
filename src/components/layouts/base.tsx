@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import { getPage } from "sitex:content"
 
 import { Sidebar1 } from "@/components/blocks/sidebar-1"
 
@@ -11,28 +12,28 @@ export type BaseProps = {
   children?: ReactNode
 }
 
-export const docsNavigation = [
-  {
-    href: "/docs/",
-    label: "Introduction",
-  },
-  {
-    href: "/docs/installation",
-    label: "Installation",
-  },
-  {
-    href: "/docs/page-routing",
-    label: "Page routing",
-  },
-  {
-    href: "/docs/island-rendering",
-    label: "Island rendering",
-  },
-  {
-    href: "/docs/folder-structure",
-    label: "Folder structure",
-  },
+export type NavigationLink = {
+  href: string
+  label: string
+}
+
+const docsPagePaths = [
+  "/docs",
+  "/docs/installation",
+  "/docs/page-routing",
+  "/docs/content",
+  "/docs/island-rendering",
+  "/docs/folder-structure",
 ]
+
+const docsPages = await Promise.all(docsPagePaths.map((path) => getPage(path)))
+
+export const docsNavigation: NavigationLink[] = docsPages
+  .filter((page) => page !== undefined)
+  .map((page) => ({
+    href: page.path,
+    label: page.content.title,
+  }))
 
 const site = {
   name: "Sitex Docs",
@@ -53,45 +54,6 @@ const site = {
     ],
   },
 }
-
-const themeInitScript = `
-(() => {
-  const storageKey = "vite-ui-theme";
-
-  const disableTransitions = () => {
-    const style = document.createElement("style");
-    style.appendChild(
-      document.createTextNode(
-        "*,*::before,*::after{transition:none!important}"
-      )
-    );
-    document.head.appendChild(style);
-
-    window.getComputedStyle(document.documentElement);
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        style.remove();
-      });
-    });
-  };
-
-  try {
-    const storedTheme = localStorage.getItem(storageKey) || "dark";
-    const resolvedTheme =
-      storedTheme === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light"
-        : storedTheme;
-
-    disableTransitions();
-    document.documentElement.classList.remove("light", "dark");
-    document.documentElement.classList.add(resolvedTheme);
-  } catch {
-  }
-})();
-`
 
 function normalizePath(path: string) {
   if (path === "/") return path
@@ -123,17 +85,12 @@ export default function Base({
 
   return (
     <html
-      className="bg-background text-foreground has-data-[variant=inset]:bg-sidebar overscroll-none scroll-smooth"
+      className="dark bg-background text-foreground has-data-[variant=inset]:bg-sidebar overscroll-none scroll-smooth"
       data-slot="layout"
       lang="en"
     >
       <head>
         <meta charSet="utf-8" />
-        <script
-          dangerouslySetInnerHTML={{
-            __html: themeInitScript,
-          }}
-        />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <title>{title}</title>

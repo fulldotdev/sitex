@@ -1,21 +1,24 @@
 import Doc from "@/components/layouts/doc"
 
+export const content = {
+  title: "Introduction",
+  description:
+    "A simpler, Vite-based React framework for building fast websites with local content.",
+  order: 1,
+  tocItems: [
+    { href: "#overview", label: "Overview" },
+    { href: "#use-cases", label: "Use cases" },
+    { href: "#sitex-versus-astro", label: "Sitex versus Astro" },
+  ],
+}
+
 export default function IntroductionPage() {
   return (
     <Doc
-      title="Introduction"
-      description="A simpler, Vite-based React framework for building fast websites with local content."
-      path="/docs/"
-      doc={{
-        title: "Introduction",
-        description:
-          "A simpler, Vite-based React framework for building fast websites with local content.",
-        tocItems: [
-          { href: "#overview", label: "Overview" },
-          { href: "#use-cases", label: "Use cases" },
-          { href: "#sitex-versus-astro", label: "Sitex versus Astro" },
-        ],
-      }}
+      title={content.title}
+      description={content.description}
+      path="/docs"
+      doc={content}
     >
       <h2 id="overview">Overview</h2>
       <p>

@@ -36,8 +36,8 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-
-import { ThemeProvider, ThemeToggle } from "../ui/theme-toggle"
+import { ThemeToggle } from "@/components/ui/theme-toggle"
+import { ThemeProvider } from "@/components/theme-provider"
 
 type NavigationGroup = {
   label: string
@@ -88,84 +88,87 @@ function Sidebar1({
   const currentPath = normalizePath(path)
 
   return (
-    <SidebarProvider>
-      <Sidebar
-        className={cn(className)}
-        collapsible="offcanvas"
-        variant="inset"
-      >
-        <SidebarHeader className="flex-col">
-          <SidebarMenuButton
-            render={<a href={logo.href} />}
-            size="lg"
-            variant="default"
-          >
-            <Logo>
-              <LogoText className="truncate">Site</LogoText>
-              <LogoImage aria-label="x" />
-            </Logo>
-          </SidebarMenuButton>
-        </SidebarHeader>
-        <SidebarContent className="mask-[linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)] [-webkit-mask-image:linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)] group-data-[collapsible=icon]:mask-none group-data-[collapsible=icon]:[-webkit-mask-image:none]">
-          {navigation.map((group) => (
-            <SidebarGroup key={group.label}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-              <SidebarMenu>
-                {getNavigationItems(group).map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      isActive={normalizePath(item.href) === currentPath}
-                      render={<a href={item.href} />}
-                    >
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          ))}
-        </SidebarContent>
-      </Sidebar>
-      <SidebarInset>
-        <Header className="h-16 shrink-0 border-b">
-          <HeaderContainer className="max-w-none justify-between gap-2">
-            <HeaderGroup className="flex-1 md:flex-none">
-              <SidebarTrigger />
-              <Separator orientation="vertical" className="my-auto mr-2 h-4" />
-              <Breadcrumb className="hidden md:block">
-                <BreadcrumbList>
-                  <BreadcrumbTrail
-                    breadcrumb={breadcrumb}
-                    currentPath={currentPath}
-                  />
-                </BreadcrumbList>
-              </Breadcrumb>
-            </HeaderGroup>
-            <HeaderGroup className="gap-1">
-              <Button
-                aria-label={`View ${githubRepo} on GitHub`}
-                render={
-                  <a
-                    href={`https://github.com/${githubRepo}`}
-                    rel="noreferrer"
-                    target="_blank"
-                  />
-                }
-                size="sm"
-                variant="ghost"
-              >
-                <ExternalLinkIcon />
-                <span className="hidden sm:inline">GitHub</span>
-              </Button>
-              <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <SidebarProvider>
+        <Sidebar
+          className={cn(className)}
+          collapsible="offcanvas"
+          variant="inset"
+        >
+          <SidebarHeader className="flex-col">
+            <SidebarMenuButton
+              render={<a href={logo.href} />}
+              size="lg"
+              variant="default"
+            >
+              <Logo>
+                <LogoText className="truncate">Site</LogoText>
+                <LogoImage aria-label="x" />
+              </Logo>
+            </SidebarMenuButton>
+          </SidebarHeader>
+          <SidebarContent className="mask-[linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)] [-webkit-mask-image:linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)] group-data-[collapsible=icon]:mask-none group-data-[collapsible=icon]:[-webkit-mask-image:none]">
+            {navigation.map((group) => (
+              <SidebarGroup key={group.label}>
+                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                <SidebarMenu>
+                  {getNavigationItems(group).map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={normalizePath(item.href) === currentPath}
+                        render={<a href={item.href} />}
+                      >
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+        </Sidebar>
+        <SidebarInset>
+          <Header className="h-16 shrink-0 border-b">
+            <HeaderContainer className="max-w-none justify-between gap-2">
+              <HeaderGroup className="flex-1 md:flex-none">
+                <SidebarTrigger />
+                <Separator
+                  orientation="vertical"
+                  className="my-auto mr-2 h-4"
+                />
+                <Breadcrumb className="hidden md:block">
+                  <BreadcrumbList>
+                    <BreadcrumbTrail
+                      breadcrumb={breadcrumb}
+                      currentPath={currentPath}
+                    />
+                  </BreadcrumbList>
+                </Breadcrumb>
+              </HeaderGroup>
+              <HeaderGroup className="gap-1">
+                <Button
+                  aria-label={`View ${githubRepo} on GitHub`}
+                  render={
+                    <a
+                      href={`https://github.com/${githubRepo}`}
+                      rel="noreferrer"
+                      target="_blank"
+                    />
+                  }
+                  size="sm"
+                  variant="ghost"
+                >
+                  <ExternalLinkIcon />
+                  <span className="hidden sm:inline">GitHub</span>
+                </Button>
                 <ThemeToggle />
-              </ThemeProvider>
-            </HeaderGroup>
-          </HeaderContainer>
-        </Header>
-        {children}
-      </SidebarInset>
-    </SidebarProvider>
+              </HeaderGroup>
+            </HeaderContainer>
+          </Header>
+          {children}
+        </SidebarInset>
+      </SidebarProvider>
+    </ThemeProvider>
   )
 }
 
