@@ -32,7 +32,8 @@ export const docsNavigation: NavigationLink[] = docsPages
   .filter((page) => page !== undefined)
   .map((page) => ({
     href: page.path,
-    label: page.content.title,
+    label:
+      typeof page.content.title === "string" ? page.content.title : page.path,
   }))
 
 const site = {
