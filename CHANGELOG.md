@@ -1,5 +1,11 @@
 # @fulldotdev/sitex
 
+## 0.2.1
+
+### Patch Changes
+
+- [`8a6ef88`](https://github.com/fulldotdev/sitex/commit/8a6ef88b4148ab99f5fdad0217ddbbbc33476055) Thanks [@silveltman](https://github.com/silveltman)! - Add fallback `sitex:content` types so projects can typecheck before generated content types exist.
+
 ## 0.2.0
 
 ### Minor Changes
