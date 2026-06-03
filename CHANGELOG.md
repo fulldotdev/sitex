@@ -1,5 +1,15 @@
 # @fulldotdev/sitex
 
+## 0.2.0
+
+### Minor Changes
+
+- [`00eab4d`](https://github.com/fulldotdev/sitex/commit/00eab4d753c28b307e0dd60ea7814c8d9e4aca56) Thanks [@silveltman](https://github.com/silveltman)! - Add a typed route content API through `sitex:content`, including generated content types, `getPages`, and `getPage`.
+
+  Update SiteX for Vite 8, switch package bundling to Rolldown, externalize peer dependency subpaths correctly, and build CSS entry points through Vite's Rolldown input configuration.
+
+  Refresh the documentation site with a Content API page, content-driven docs navigation, hydrated code-block copy buttons, and updated installation guidance.
+
 ## 0.1.3
 
 ### Patch Changes
