@@ -107,7 +107,7 @@ function Sidebar1({
             >
               <Logo className="gap-2">
                 <LogoImage aria-label="x" className="size-6" />
-                <LogoText className="truncate">sitex</LogoText>
+                <LogoText className="truncate">Sitex</LogoText>
               </Logo>
             </SidebarMenuButton>
           </SidebarHeader>
