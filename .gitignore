@@ -9,6 +9,7 @@ package-dist/
 .vite/
 .sitex/
 .sitex-bench/
+.dev/
 
 # local env files
 .env

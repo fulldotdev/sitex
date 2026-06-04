@@ -14,8 +14,8 @@ pnpm dev
 Run these before opening a pull request:
 
 ```bash
-pnpm typecheck
-pnpm build
+pnpm check
+pnpm ready
 ```
 
 ## Scope

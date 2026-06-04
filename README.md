@@ -1,55 +1,25 @@
-# SiteX
+# SiteX Workspace
 
-A simpler, Vite-based React framework for building fast websites with local content.
+SiteX is a Vite+ monorepo with one docs app and one publishable framework
+package.
 
-SiteX renders React routes to static HTML by default. When a page needs browser interactivity, imported React components can opt into island rendering with `client:load` or `client:only`.
+## Structure
 
-## Install
-
-```bash
-pnpm add @fulldotdev/sitex react react-dom vite@^8 @vitejs/plugin-react
-pnpm add -D typescript @types/react @types/react-dom
-```
-
-If pnpm asks about dependency build scripts, approve the packages your project
-trusts in your workspace configuration.
-
-## Vite
-
-SiteX requires Vite 8 or newer.
-
-```ts
-import { defineConfig } from "vite"
-import { sitex } from "@fulldotdev/sitex/plugin"
-import react from "@vitejs/plugin-react"
-
-export default defineConfig({
-  appType: "custom",
-  plugins: [react(), sitex()],
-})
-```
-
-## TypeScript
-
-```json
-{
-  "extends": "@fulldotdev/sitex/tsconfig",
-  "include": ["src/**/*", "vite.config.ts"]
-}
+```txt
+apps/docs/        # SiteX docs and reference app
+packages/sitex/   # @fulldotdev/sitex package source
 ```
 
 ## Scripts
 
 ```bash
-pnpm dev
-pnpm build
-pnpm preview
+pnpm dev      # run the docs app
+pnpm build    # build all workspace packages/apps
+pnpm check    # format, lint, and typecheck
+pnpm ready    # check and build everything
 ```
 
-## Documentation
+## Package
 
-See the local docs app in `src/pages/docs`.
-
-## License
-
-MIT.
+The framework package lives in `packages/sitex` and is published as
+`@fulldotdev/sitex`.

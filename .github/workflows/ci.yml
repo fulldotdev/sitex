@@ -37,14 +37,5 @@ jobs:
         if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'changeset-release/')
         run: pnpm exec changeset status --since=origin/${{ github.event.pull_request.base.ref }}
 
-      - name: Check formatting
-        run: pnpm format:check
-
-      - name: Type check
-        run: pnpm typecheck
-
-      - name: Build package
-        run: pnpm build:package
-
-      - name: Build site
-        run: pnpm build
+      - name: Ready
+        run: pnpm ready

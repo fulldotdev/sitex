@@ -45,12 +45,12 @@ An app that both documents Sitex and proves the recommended app structure agains
 _Avoid_: component showcase
 
 **Repository shape**:
-The cleanup target is a simple single-project shape: root `sitex/` for framework source and root `src/` for the reference app. Avoid monorepo package/app ceremony while there is only one framework and one app.
-_Avoid_: assumed monorepo, `packages/sitex`, `apps/docs`
+The repo follows Vite+'s monorepo shape: `packages/sitex` contains the framework package and `apps/docs` contains the docs/reference app.
+_Avoid_: mixing package and app concerns in the repository root
 
 **Framework import**:
-The reference app should import Sitex through package-style public imports such as `sitex/plugin`, even when the framework source lives in root `sitex/`.
-_Avoid_: relative framework internals
+Published apps should import Sitex through package-style public imports such as `@fulldotdev/sitex/plugin`. The in-repo docs app may import package source directly when dogfooding unpublished changes.
+_Avoid_: exposing framework internals as app-facing public APIs
 
 **Hidden island runtime**:
 The React runtime code Sitex uses under the hood to mark, load, hydrate, and client-render islands. App authors should not need to import this directly.
@@ -77,11 +77,11 @@ Sitex may export TypeScript source directly during the experiment because the re
 _Avoid_: premature package build
 
 **Production build**:
-The public production build command should be `vite build`. Any custom Sitex build script is experiment scaffolding; cleanup should move static route rendering and asset emission into the Sitex Vite plugin.
+The public production build command should be `vp build`. Any custom Sitex build script is experiment scaffolding; cleanup should keep static route rendering and asset emission inside the Sitex Vite plugin.
 _Avoid_: separate Sitex build command
 
 **Development server**:
-The public development command should be `vite dev`. Sitex development behavior should come from the Vite plugin rather than a custom dev server command.
+The public development command should be `vp dev`. Sitex development behavior should come from the Vite plugin rather than a custom dev server command.
 _Avoid_: separate Sitex dev command
 
 **Document shell**:

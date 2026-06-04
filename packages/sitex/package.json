@@ -1,0 +1,70 @@
+{
+  "name": "@fulldotdev/sitex",
+  "version": "0.2.1",
+  "description": "A simpler React framework for building content sites.",
+  "homepage": "https://github.com/fulldotdev/sitex#readme",
+  "bugs": {
+    "url": "https://github.com/fulldotdev/sitex/issues"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fulldotdev/sitex.git"
+  },
+  "files": [
+    "package-dist",
+    "sitex/config",
+    "sitex/types"
+  ],
+  "type": "module",
+  "exports": {
+    "./island": {
+      "types": "./package-dist/hydration/server.d.ts",
+      "default": "./package-dist/hydration/server.js"
+    },
+    "./plugin": {
+      "types": "./package-dist/vite/plugin.d.ts",
+      "default": "./package-dist/vite/plugin.js"
+    },
+    "./tsconfig": "./sitex/config/tsconfig.json",
+    "./virtual": "./sitex/types/virtual.d.ts"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "scripts": {
+    "build": "vp pack",
+    "dev": "vp pack --watch",
+    "check": "vp check",
+    "prepublishOnly": "vp run build"
+  },
+  "dependencies": {
+    "@babel/generator": "^7.29.1",
+    "@babel/parser": "^7.29.3",
+    "@babel/traverse": "^7.29.0",
+    "@babel/types": "^7.29.0",
+    "fast-glob": "^3.3.3",
+    "quicktype-core": "^23.2.6"
+  },
+  "peerDependencies": {
+    "react": ">=19",
+    "react-dom": ">=19",
+    "vite": ">=8",
+    "vite-plus": ">=0.1.24"
+  },
+  "devDependencies": {
+    "@types/babel__generator": "^7.27.0",
+    "@types/babel__traverse": "^7.28.0",
+    "@types/node": "^24.3.1",
+    "@types/react": "^19.1.12",
+    "@types/react-dom": "^19.1.9",
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1",
+    "typescript": "^5.9.2",
+    "vite": "^8.0.16",
+    "vite-plus": "^0.1.24"
+  },
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

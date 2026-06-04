@@ -1,14 +1,9 @@
 {
-  "extends": "./sitex/config/tsconfig.json",
-  "include": ["src/**/*", "sitex/**/*", ".sitex/**/*.d.ts", "vite.config.ts"],
-  "exclude": ["dist"],
   "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"],
-      "@fulldotdev/sitex/island": ["./sitex/hydration/server.tsx"],
-      "@fulldotdev/sitex/plugin": ["./sitex/vite/plugin.ts"],
-      "@fulldotdev/sitex/tsconfig": ["./sitex/config/tsconfig.json"],
-      "@fulldotdev/sitex/virtual": ["./sitex/types/virtual.d.ts"]
-    }
+    "noEmit": true,
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "allowImportingTsExtensions": true,
+    "esModuleInterop": true
   }
 }
