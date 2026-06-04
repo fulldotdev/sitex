@@ -61,7 +61,7 @@ The current public surface should be the Sitex Vite plugin and JSX client direct
 _Avoid_: direct island imports, document helper imports
 
 **Router export**:
-The current `sitex/router` app import exists for document helpers and should disappear during cleanup. Route rendering internals should not be app-authored imports.
+Route rendering internals are framework-owned virtual module code. Apps should not import route rendering helpers directly.
 _Avoid_: public router helpers
 
 **TypeScript config export**:

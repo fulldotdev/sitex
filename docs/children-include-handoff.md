@@ -171,8 +171,8 @@ hydrateRoot(element, createElement(TreeIsland))
 
 The removed experiment touched:
 
-- `sitex/plugin.ts`
-- `sitex/virtual.d.ts`
+- `src/vite/plugin.ts`
+- `src/types/virtual.d.ts`
 - `src/pages/examples.tsx`
 - `src/components/shared-counter.tsx`
 

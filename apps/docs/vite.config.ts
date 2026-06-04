@@ -3,7 +3,7 @@ import { defineConfig } from "vite-plus"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 
-import { sitex } from "../../packages/sitex/sitex/vite/plugin"
+import { sitex } from "../../packages/sitex/src/vite/plugin"
 
 export default defineConfig({
   appType: "custom",

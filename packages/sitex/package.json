@@ -12,22 +12,22 @@
     "url": "git+https://github.com/fulldotdev/sitex.git"
   },
   "files": [
-    "package-dist",
-    "sitex/config",
-    "sitex/types"
+    "dist",
+    "src/config",
+    "src/types"
   ],
   "type": "module",
   "exports": {
     "./island": {
-      "types": "./package-dist/hydration/server.d.ts",
-      "default": "./package-dist/hydration/server.js"
+      "types": "./dist/hydration/server.d.ts",
+      "default": "./dist/hydration/server.js"
     },
     "./plugin": {
-      "types": "./package-dist/vite/plugin.d.ts",
-      "default": "./package-dist/vite/plugin.js"
+      "types": "./dist/vite/plugin.d.ts",
+      "default": "./dist/vite/plugin.js"
     },
-    "./tsconfig": "./sitex/config/tsconfig.json",
-    "./virtual": "./sitex/types/virtual.d.ts"
+    "./tsconfig": "./src/config/tsconfig.json",
+    "./virtual": "./src/types/virtual.d.ts"
   },
   "publishConfig": {
     "access": "public"

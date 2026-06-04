@@ -1,5 +1,5 @@
 {
-  "extends": "./sitex/config/tsconfig.json",
-  "include": ["sitex/**/*", "vite.config.ts"],
-  "exclude": ["package-dist"]
+  "extends": "./src/config/tsconfig.json",
+  "include": ["src/**/*", "vite.config.ts"],
+  "exclude": ["dist"]
 }

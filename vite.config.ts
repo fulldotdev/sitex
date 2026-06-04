@@ -16,7 +16,7 @@ export default defineConfig({
       "apps/docs/src/components/ui/**",
       "apps/docs/src/hooks/use-mobile.ts",
       "packages/sitex/**",
-      "packages/*/package-dist/**",
+      "packages/*/dist/**",
       "**/.sitex/**",
     ],
     options: {

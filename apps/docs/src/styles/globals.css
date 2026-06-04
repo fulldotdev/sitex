@@ -550,7 +550,7 @@
   [data-slot="typography"]
     > .docs-code-block
     > .docs-code-block-content
-    > pre.astro-code {
+    > pre.shiki {
     @apply m-0 min-w-max rounded-none border-0 bg-transparent p-4 pr-14 text-sm leading-[var(--text-sm--line-height)];
     font-family: var(--font-mono);
     background-color: transparent !important;
@@ -564,7 +564,7 @@
   [data-slot="typography"]
     > .docs-code-block
     > .docs-code-block-content
-    > pre.astro-code
+    > pre.shiki
     code {
     @apply text-sm leading-[var(--text-sm--line-height)];
     color: var(--shiki-light, var(--foreground));
@@ -588,7 +588,7 @@
     [data-slot="typography"]
     > .docs-code-block
     > .docs-code-block-content
-    > pre.astro-code
+    > pre.shiki
     code {
     color: var(--shiki-dark, var(--foreground)) !important;
   }
@@ -613,19 +613,19 @@
     @apply block text-sm leading-none font-medium;
   }
 
-  [data-slot="typography"] > pre.astro-code {
+  [data-slot="typography"] > pre.shiki {
     @apply rounded-xl border border-border bg-muted/60 p-4 text-sm leading-[var(--text-sm--line-height)];
   }
 
-  [data-slot="typography"] > pre.astro-code code {
+  [data-slot="typography"] > pre.shiki code {
     @apply text-inherit;
   }
 
-  .dark [data-slot="typography"] > pre.astro-code {
+  .dark [data-slot="typography"] > pre.shiki {
     color: var(--shiki-dark, var(--foreground));
   }
 
-  .dark [data-slot="typography"] > pre.astro-code span[style*="--shiki-dark"] {
+  .dark [data-slot="typography"] > pre.shiki span[style*="--shiki-dark"] {
     color: var(--shiki-dark);
     font-style: var(--shiki-dark-font-style, inherit);
     font-weight: var(--shiki-dark-font-weight, inherit);

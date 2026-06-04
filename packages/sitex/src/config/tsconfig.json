@@ -17,5 +17,6 @@
     "noEmit": true,
     "jsx": "react-jsx",
     "types": ["vite-plus/client"]
-  }
+  },
+  "files": ["../types/virtual.d.ts"]
 }
