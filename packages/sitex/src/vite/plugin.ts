@@ -17,11 +17,20 @@ import {
 } from "vite-plus"
 
 import { randomUUID } from "node:crypto"
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises"
+import { readFileSync } from "node:fs"
+import {
+  access,
+  mkdir,
+  readFile,
+  rename,
+  rm,
+  writeFile,
+} from "node:fs/promises"
 import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import fg from "fast-glob"
+import { nitro } from "nitro/vite"
 
 import {
   collectHydrationEntries,
@@ -77,12 +86,30 @@ function shouldGenerateContentTypes() {
 }
 
 export function sitex(): PluginOption[] {
-  return [sitexPlugin()]
+  const plugins: PluginOption[] = [sitexPlugin()]
+
+  if (
+    process.env.SITEX_INTERNAL_RENDER !== "1" &&
+    hasServerPagesSync(process.cwd())
+  ) {
+    plugins.push(
+      ...(nitro({
+        renderer: {
+          handler: packageFile("nitro/renderer", "ts"),
+        },
+        serverDir: ".",
+      }) as PluginOption[])
+    )
+  }
+
+  return plugins
 }
 
 function sitexPlugin(): Plugin {
   let root = process.cwd()
   let config: ResolvedConfig
+  let cleanedBuildOutput = false
+  let wroteStaticHtml = false
   const hydration: HydrationRegistry = new Map()
 
   return {
@@ -116,7 +143,12 @@ function sitexPlugin(): Plugin {
     async buildStart() {
       hydration.clear()
 
-      if (config.command === "build") {
+      if (
+        config.command === "build" &&
+        !cleanedBuildOutput &&
+        process.env.SITEX_INTERNAL_RENDER !== "1"
+      ) {
+        cleanedBuildOutput = true
         await rm(path.join(root, "dist"), { recursive: true, force: true })
       }
 
@@ -199,11 +231,13 @@ function sitexPlugin(): Plugin {
           }
 
           const url = req.url?.split("?")[0] ?? "/"
+          const request = createWebRequest(req)
 
           try {
             const { render } = await importServerModule(server, virtualRenderId)
             const initialHtml = await render(url, {
               islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
+              request,
             })
 
             if (!initialHtml) {
@@ -214,6 +248,7 @@ function sitexPlugin(): Plugin {
             const html = await render(url, {
               assetTags: renderStylesheetTags(readDevStylesheetHrefs(server)),
               islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
+              request,
             })
 
             if (!html) {
@@ -242,7 +277,7 @@ function sitexPlugin(): Plugin {
           }
 
           const url = req.url?.split("?")[0] ?? "/"
-          const file = routePathToHtmlFile(root, url)
+          const file = routePathToHtmlFile(path.join(root, "dist"), url)
 
           try {
             const html = await readFile(file, "utf8")
@@ -280,9 +315,10 @@ function sitexPlugin(): Plugin {
       },
     },
 
-    async writeBundle() {
-      if (config.command !== "build") return
+    async closeBundle() {
+      if (config.command !== "build" || wroteStaticHtml) return
 
+      wroteStaticHtml = true
       await writeStaticHtml(root)
     },
   }
@@ -310,11 +346,15 @@ function createBuildInput(root: string) {
 }
 
 async function writeStaticHtml(root: string) {
-  const manifest = await readManifest(root)
+  const publicRoot = await findBuildPublicRoot(root)
+  const manifest = await readManifest(publicRoot)
   const islandClientAsset = Object.values(manifest).find(
     (entry) => entry.name === "islandClient"
   )
   const stylesheetTags = renderStylesheetTags(readStylesheetAssets(manifest))
+
+  const previousInternalRender = process.env.SITEX_INTERNAL_RENDER
+  process.env.SITEX_INTERNAL_RENDER = "1"
 
   const server = await createServer({
     configFile: path.join(root, "vite.config.ts"),
@@ -333,6 +373,8 @@ async function writeStaticHtml(root: string) {
     const routes = await getRoutes()
 
     for (const route of routes) {
+      if (route.render === "server") continue
+
       const html = await render(route.path)
 
       if (!html) {
@@ -349,15 +391,21 @@ async function writeStaticHtml(root: string) {
           : undefined,
       })
 
-      await writeHtml(root, route.path, finalHtml)
+      await writeHtml(publicRoot, route.path, finalHtml)
     }
   } finally {
     await server.close()
+
+    if (previousInternalRender === undefined) {
+      delete process.env.SITEX_INTERNAL_RENDER
+    } else {
+      process.env.SITEX_INTERNAL_RENDER = previousInternalRender
+    }
   }
 }
 
-async function writeHtml(root: string, routePath: string, html: string) {
-  const file = routePathToHtmlFile(root, routePath)
+async function writeHtml(publicRoot: string, routePath: string, html: string) {
+  const file = routePathToHtmlFile(publicRoot, routePath)
 
   await mkdir(path.dirname(file), { recursive: true })
   await writeFile(file, html)
@@ -375,6 +423,20 @@ function collectStyleFilesSync(root: string) {
   return fg.sync("src/**/*.css", {
     cwd: root,
     onlyFiles: true,
+  })
+}
+
+function hasServerPagesSync(root: string) {
+  const files = fg.sync("src/pages/**/*.tsx", {
+    cwd: root,
+    ignore: ["src/pages/examples/**"],
+    onlyFiles: true,
+  })
+
+  return files.some((file) => {
+    const code = readFileSync(path.join(root, file), "utf8")
+
+    return /\bexport\s+const\s+render\s*=\s*["']server["']/.test(code)
   })
 }
 
@@ -486,33 +548,20 @@ async function writeFileAtomic(file: string, content: string) {
 
 function createVirtualRoutesCode() {
   return [
+    `import { readPageRoutes, sortRoutes, validateUniqueRoutePaths } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
     `const routeModules = import.meta.glob("/src/pages/**/*.tsx")`,
-    `function normalizeRoutePath(path) {`,
-    `  if (!path || path === "/") return "/"`,
-    `  return "/" + path.replace(/^\\/+|\\/+$/g, "")`,
-    `}`,
-    `function staticPageFileToPath(file) {`,
-    `  const route = file.replace(/^src\\/pages/, "").replace(/\\/index\\.tsx$/, "/").replace(/\\.tsx$/, "")`,
-    `  return normalizeRoutePath(route || "/")`,
-    `}`,
-    `function readStaticRoute(module, file) {`,
-    `  const component = module.default`,
-    `  if (typeof component !== "function") {`,
-    `    throw new Error(\`Static page module "\${file}" must default export a component.\`)`,
-    `  }`,
-    `  return { file, path: staticPageFileToPath(file), layout: component }`,
-    `}`,
     `function isRouteFile(file) {`,
-    `  return !file.includes("/src/pages/examples/") && !/\\[[^\\]]+\\]/.test(file)`,
+    `  return !file.includes("/src/pages/examples/")`,
     `}`,
     `export async function getRoutes() {`,
     `  const routes = []`,
     `  for (const [file, load] of Object.entries(routeModules)) {`,
     `    if (!isRouteFile(file)) continue`,
     `    const routeFile = file.replace(/^\\/+/, "")`,
-    `    routes.push(readStaticRoute(await load(), routeFile))`,
+    `    routes.push(...await readPageRoutes(await load(), routeFile))`,
     `  }`,
-    `  return routes`,
+    `  validateUniqueRoutePaths(routes)`,
+    `  return sortRoutes(routes)`,
     `}`,
   ].join("\n")
 }
@@ -609,15 +658,60 @@ async function createContentTypesCode(pages: ContentPage[]) {
 function createVirtualRenderCode() {
   return [
     `import { prerender } from "react-dom/static"`,
+    `import { renderToString } from "react-dom/server"`,
     `import { getRoutes } from ${JSON.stringify(virtualRoutesId)}`,
+    `import { createPageContext, matchRoute, readPageRoutes } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
     `export { getRoutes }`,
+    `const serverRouteModules = import.meta.glob("/src/pages/**/*.tsx")`,
+    `const serverRouteSources = import.meta.glob("/src/pages/**/*.tsx", { query: "?raw", import: "default" })`,
+    `function isRouteFile(file) {`,
+    `  return !file.includes("/src/pages/examples/")`,
+    `}`,
     `function normalizeRoutePath(path) {`,
     `  if (!path || path === "/") return "/"`,
     `  return "/" + path.replace(/^\\/+|\\/+$/g, "")`,
     `}`,
-    `function findRoute(routes, url) {`,
-    `  const normalizedUrl = normalizeRoutePath(url)`,
-    `  return routes.find((route) => normalizeRoutePath(route.path) === normalizedUrl)`,
+    `function routeFileToPattern(file) {`,
+    `  const route = file.replace(/^\\/+/, "").replace(/^src\\/pages/, "").replace(/\\/index\\.tsx$/, "/").replace(/\\.tsx$/, "")`,
+    `  return normalizeRoutePath(route || "/")`,
+    `}`,
+    `function routeScore(path) {`,
+    `  return normalizeRoutePath(path).split("/").reduce((score, segment) => score + (!segment ? 0 : segment.startsWith("[") ? 1 : 10), 0)`,
+    `}`,
+    `function matchPathPattern(pattern, path) {`,
+    `  const patternSegments = normalizeRoutePath(pattern).split("/")`,
+    `  const pathSegments = normalizeRoutePath(path).split("/")`,
+    `  if (patternSegments.length !== pathSegments.length) return undefined`,
+    `  const params = {}`,
+    `  for (let index = 0; index < patternSegments.length; index++) {`,
+    `    const patternSegment = patternSegments[index]`,
+    `    const pathSegment = pathSegments[index]`,
+    `    const paramMatch = patternSegment.match(/^\\[([^\\]]+)\\]$/)`,
+    `    if (paramMatch) {`,
+    `      params[paramMatch[1]] = decodeURIComponent(pathSegment)`,
+    `      continue`,
+    `    }`,
+    `    if (patternSegment !== pathSegment) return undefined`,
+    `  }`,
+    `  return params`,
+    `}`,
+    `async function matchServerRoute(path) {`,
+    `  const candidates = []`,
+    `  for (const [file, loadSource] of Object.entries(serverRouteSources)) {`,
+    `    if (!isRouteFile(file)) continue`,
+    `    const source = await loadSource()`,
+    `    if (!/\\bexport\\s+const\\s+render\\s*=\\s*["']server["']/.test(source)) continue`,
+    `    const pattern = routeFileToPattern(file)`,
+    `    const params = matchPathPattern(pattern, path)`,
+    `    if (params) candidates.push({ file, params, pattern, score: routeScore(pattern) })`,
+    `  }`,
+    `  candidates.sort((a, b) => b.score - a.score || a.pattern.localeCompare(b.pattern))`,
+    `  const candidate = candidates[0]`,
+    `  if (!candidate) return undefined`,
+    `  const routeFile = candidate.file.replace(/^\\/+/, "")`,
+    `  const routes = await readPageRoutes(await serverRouteModules[candidate.file](), routeFile)`,
+    `  const match = matchRoute(routes, path)`,
+    `  return match ? { params: { ...candidate.params, ...match.params }, route: match.route } : undefined`,
     `}`,
     `function replaceLast(value, search, replacement) {`,
     `  const index = value.lastIndexOf(search)`,
@@ -644,26 +738,67 @@ function createVirtualRenderCode() {
     `  }`,
     `  return result`,
     `}`,
-    `async function renderRouteHtml(route, options = {}) {`,
-    `  const { prelude } = await prerender(await route.layout())`,
-    `  const html = "<!doctype html>" + await new Response(prelude).text()`,
+    `async function renderRouteHtml(route, params, options = {}) {`,
+    `  const request = route.render === "server" ? options.request : undefined`,
+    `  const context = createPageContext(route, params, request)`,
+    `  const node = await route.layout(context)`,
+    `  let body`,
+    `  if (route.render === "server") {`,
+    `    body = renderToString(node)`,
+    `  } else {`,
+    `    body = await new Response((await prerender(node)).prelude).text()`,
+    `  }`,
+    `  const html = "<!doctype html>" + body`,
     `  return injectRouteHtmlAssets(html, options)`,
     `}`,
     `export async function render(url, options = {}) {`,
     `  const routes = await getRoutes()`,
-    `  const route = findRoute(routes, url)`,
-    `  if (!route) return undefined`,
-    `  return renderRouteHtml(route, options)`,
+    `  const match = matchRoute(routes, url)`,
+    `  if (!match) return undefined`,
+    `  return renderRouteHtml(match.route, match.params, options)`,
+    `}`,
+    `export async function renderServerResponse(request, options = {}) {`,
+    `  const url = new URL(request.url)`,
+    `  const match = await matchServerRoute(url.pathname)`,
+    `  if (!match) return undefined`,
+    `  const html = await renderRouteHtml(match.route, match.params, { ...options, request })`,
+    `  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } })`,
     `}`,
   ].join("\n")
+}
+
+function createWebRequest(req: Connect.IncomingMessage) {
+  const protocolHeader = req.headers["x-forwarded-proto"]
+  const protocol = Array.isArray(protocolHeader)
+    ? (protocolHeader[0] ?? "http")
+    : (protocolHeader ?? "http")
+  const host = req.headers.host ?? "localhost"
+  const url = new URL(req.url ?? "/", `${protocol}://${host}`)
+  const headers = new Headers()
+
+  for (const [key, value] of Object.entries(req.headers)) {
+    if (value === undefined) continue
+
+    if (Array.isArray(value)) {
+      for (const item of value) headers.append(key, item)
+      continue
+    }
+
+    headers.set(key, value)
+  }
+
+  return new Request(url, {
+    headers,
+    method: req.method,
+  })
 }
 
 function routePathToHtmlFile(root: string, routePath: string) {
   const normalizedRoutePath = routePath.replace(/^\/+|\/+$/g, "")
 
   return routePath === "/"
-    ? path.join(root, "dist/index.html")
-    : path.join(root, "dist", normalizedRoutePath, "index.html")
+    ? path.join(root, "index.html")
+    : path.join(root, normalizedRoutePath, "index.html")
 }
 
 function staticPageFileToPath(file: string) {
@@ -746,8 +881,24 @@ function normalizeRoutePath(path: string) {
   return `/${path.replace(/^\/+|\/+$/g, "")}`
 }
 
-async function readManifest(root: string): Promise<Manifest> {
-  const file = path.join(root, "dist/.vite/manifest.json")
+async function findBuildPublicRoot(root: string) {
+  for (const publicRoot of [
+    path.join(root, "dist"),
+    path.join(root, ".output/public"),
+  ]) {
+    try {
+      await access(path.join(publicRoot, ".vite/manifest.json"))
+      return publicRoot
+    } catch {
+      // Try the next build output.
+    }
+  }
+
+  throw new Error("Sitex could not find the Vite manifest after build.")
+}
+
+async function readManifest(publicRoot: string): Promise<Manifest> {
+  const file = path.join(publicRoot, ".vite/manifest.json")
   return JSON.parse(await readFile(file, "utf8")) as Manifest
 }
 

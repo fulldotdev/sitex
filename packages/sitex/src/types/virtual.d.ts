@@ -8,29 +8,18 @@ declare module "virtual:sitex-islands" {
 }
 
 declare module "virtual:sitex-routes" {
-  import type { ReactNode } from "react"
-
-  type Route = {
-    file: string
-    path: string
-    layout: () => ReactNode | Promise<ReactNode>
-  }
+  import type { Route } from "@fulldotdev/sitex"
 
   export function getRoutes(): Promise<Route[]>
 }
 
 declare module "virtual:sitex-render" {
-  import type { ReactNode } from "react"
-
-  type Route = {
-    file: string
-    path: string
-    layout: () => ReactNode | Promise<ReactNode>
-  }
+  import type { Route } from "@fulldotdev/sitex"
 
   type RenderOptions = {
     assetTags?: string
     islandClientSrc?: string
+    request?: Request
   }
 
   export function getRoutes(): Promise<Route[]>
@@ -38,6 +27,10 @@ declare module "virtual:sitex-render" {
     url: string,
     options?: RenderOptions
   ): Promise<string | undefined>
+  export function renderServerResponse(
+    request: Request,
+    options?: RenderOptions
+  ): Promise<Response | undefined>
 }
 
 declare module "sitex:content" {

@@ -18,6 +18,10 @@
   ],
   "type": "module",
   "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./island": {
       "types": "./dist/hydration/server.d.ts",
       "default": "./dist/hydration/server.js"
@@ -44,6 +48,7 @@
     "@babel/traverse": "^7.29.0",
     "@babel/types": "^7.29.0",
     "fast-glob": "^3.3.3",
+    "nitro": "catalog:",
     "quicktype-core": "^23.2.6"
   },
   "peerDependencies": {
