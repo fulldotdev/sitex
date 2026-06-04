@@ -1,7 +1,12 @@
 {
   "extends": "../../packages/sitex/sitex/config/tsconfig.json",
   "include": [
-    "src/**/*",
+    "src/pages/**/*",
+    "src/components/blocks/**/*",
+    "src/components/layouts/**/*",
+    "src/components/ui/**/*",
+    "src/components/theme-provider.tsx",
+    "src/lib/**/*",
     ".sitex/**/*.d.ts",
     "vite.config.ts",
     "../../packages/sitex/sitex/types/virtual.d.ts"

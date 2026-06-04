@@ -8,52 +8,13 @@ export default defineConfig({
     trailingComma: "es5",
     ignorePatterns: ["docs/**"],
     sortPackageJson: false,
-    sortImports: {
-      customGroups: [
-        {
-          groupName: "react-libs",
-          elementNamePattern: ["react", "react/**"],
-        },
-        {
-          groupName: "vite-libs",
-          elementNamePattern: ["vite", "vite/**", "vite-plus", "vite-plus/**"],
-        },
-        {
-          groupName: "sitex-libs",
-          elementNamePattern: [
-            "sitex",
-            "sitex/**",
-            "@fulldotdev/sitex",
-            "@fulldotdev/sitex/**",
-          ],
-        },
-        {
-          groupName: "aliases",
-          elementNamePattern: ["@/**"],
-        },
-      ],
-      groups: [
-        "type-import",
-        "react-libs",
-        "vite-libs",
-        "sitex-libs",
-        "value-builtin",
-        "value-external",
-        "aliases",
-        ["value-parent", "value-sibling", "value-index"],
-        "unknown",
-      ],
-    },
-    sortTailwindcss: {
-      stylesheet: "./apps/docs/src/styles/globals.css",
-      functions: ["cn", "cva"],
-      preserveWhitespace: true,
-    },
   },
   lint: {
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
     ignorePatterns: [
       "apps/*/dist/**",
+      "apps/docs/src/components/ui/**",
+      "apps/docs/src/hooks/use-mobile.ts",
       "packages/sitex/**",
       "packages/*/package-dist/**",
       "**/.sitex/**",

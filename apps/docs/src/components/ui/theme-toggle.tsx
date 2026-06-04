@@ -1,9 +1,8 @@
+import { MoonIcon, SunIcon } from "lucide-react"
 import type React from "react"
 
-import { MoonIcon, SunIcon } from "lucide-react"
-
-import { useTheme } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
+import { useTheme } from "@/components/theme-provider"
 
 type ThemeToggleProps = React.ComponentProps<typeof Button>
 
