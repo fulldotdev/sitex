@@ -114,7 +114,7 @@ export default function Base({
           navigation={site.sidebar.navigation}
           githubRepo={site.header.githubRepo}
           path={path}
-          client:load
+          client:idle
         >
           <main
             className="@container flex min-h-0 flex-1 flex-col overflow-y-auto in-data-[slot=sidebar-inset]:rounded-[inherit]"

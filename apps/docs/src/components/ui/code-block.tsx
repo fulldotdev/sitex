@@ -48,7 +48,7 @@ function CodeBlock({ code, lang }: CodeBlockProps) {
 
   return (
     <figure className="docs-code-block">
-      <CodeBlockCopyButton code={trimmedCode} client:load />
+      <CodeBlockCopyButton code={trimmedCode} client:visible />
       <div
         className="docs-code-block-content"
         dangerouslySetInnerHTML={{ __html: html }}
