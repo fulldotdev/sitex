@@ -230,51 +230,50 @@ function sitexPlugin(options: Required<SitexOptions>): Plugin {
         )
       }
 
-      return () => {
-        server.middlewares.use(async (req, res, next) => {
-          if (!isHtmlRequest(req)) {
+      server.middlewares.use(async (req, res, next) => {
+        if (!isHtmlRequest(req)) {
+          next()
+          return
+        }
+
+        const url = req.url?.split("?")[0] ?? "/"
+        const request = createWebRequest(req)
+
+        try {
+          const { render } = await importServerModule(server, virtualRenderId)
+          const initialHtml = await render(url, { request })
+
+          if (!initialHtml) {
             next()
             return
           }
 
-          const url = req.url?.split("?")[0] ?? "/"
-          const request = createWebRequest(req)
+          const stylesheetHrefs = readRouteStylesheetHrefs(
+            server.environments.ssr.moduleGraph,
+            root,
+            initialHtml.route.file
+          )
+          const html = await render(url, {
+            assetTags: renderStylesheetTags(stylesheetHrefs),
+            islandClientPreamble: renderReactRefreshFallbackScript(),
+            islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
+            request,
+          })
 
-          try {
-            const { render } = await importServerModule(server, virtualRenderId)
-            const initialHtml = await render(url, { request })
-
-            if (!initialHtml) {
-              next()
-              return
-            }
-
-            const stylesheetHrefs = readRouteStylesheetHrefs(
-              server.environments.ssr.moduleGraph,
-              root,
-              initialHtml.route.file
-            )
-            const html = await render(url, {
-              assetTags: renderStylesheetTags(stylesheetHrefs),
-              islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
-              request,
-            })
-
-            if (!html) {
-              next()
-              return
-            }
-
-            const transformed = await server.transformIndexHtml(url, html.html)
-
-            res.statusCode = 200
-            res.setHeader("Content-Type", "text/html")
-            res.end(req.method === "HEAD" ? undefined : transformed)
-          } catch (error) {
-            next(error)
+          if (!html) {
+            next()
+            return
           }
-        })
-      }
+
+          const transformed = await server.transformIndexHtml(url, html.html)
+
+          res.statusCode = 200
+          res.setHeader("Content-Type", "text/html")
+          res.end(req.method === "HEAD" ? undefined : transformed)
+        } catch (error) {
+          next(error)
+        }
+      })
     },
 
     configurePreviewServer(server: PreviewServer) {
@@ -760,7 +759,7 @@ function createVirtualRenderCode() {
     `}`,
     `export function injectRouteHtmlAssets(html, options = {}) {`,
     `  const script = options.islandClientSrc && html.includes("data-sitex-island")`,
-    `    ? \`<script src="\${options.islandClientSrc}" type="module"></script>\``,
+    `    ? \`\${options.islandClientPreamble ?? ""}<script src="\${options.islandClientSrc}" type="module"></script>\``,
     `    : ""`,
     `  const headTags = options.assetTags ?? ""`,
     `  let result = html`,
@@ -791,7 +790,7 @@ function createVirtualRenderCode() {
     `  } else {`,
     `    body = await new Response((await prerender(node)).prelude).text()`,
     `  }`,
-    `  const html = "<!doctype html>" + body`,
+    `  const html = /^\\s*<!doctype\\s/i.test(body) ? body : "<!doctype html>" + body`,
     `  return injectRouteHtmlAssets(html, options)`,
     `}`,
     `export async function render(url, options = {}) {`,
@@ -965,6 +964,10 @@ async function readManifest(publicRoot: string): Promise<Manifest> {
 
 function renderStylesheetTags(hrefs: string[]) {
   return hrefs.map((href) => `<link href="${href}" rel="stylesheet">`).join("")
+}
+
+function renderReactRefreshFallbackScript() {
+  return `<script>window.$RefreshReg$ ||= () => {}; window.$RefreshSig$ ||= () => (type) => type;</script>`
 }
 
 function readRouteStylesheetHrefs(

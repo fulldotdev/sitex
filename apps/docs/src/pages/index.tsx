@@ -42,8 +42,9 @@ export default function HomePage() {
             description: (
               <>
                 Add client rendering at imported component boundaries with{" "}
-                <TypographyInlineCode>client:load</TypographyInlineCode> or{" "}
-                <TypographyInlineCode>client:only</TypographyInlineCode>.
+                <TypographyInlineCode>client:load</TypographyInlineCode>,{" "}
+                <TypographyInlineCode>client:visible</TypographyInlineCode>, or{" "}
+                <TypographyInlineCode>client:idle</TypographyInlineCode>.
               </>
             ),
           },

@@ -39,7 +39,7 @@ export async function SitexIsland({
       {...{ [hydrationAttributes.staticChildren]: "" }}
     />
   ) : null
-  const staticChildrenTemplate = staticChildrenHtml ? (
+  const directStaticChildren = staticChildrenHtml ? (
     <template
       dangerouslySetInnerHTML={{ __html: staticChildrenHtml }}
       {...{ [hydrationAttributes.staticChildren]: "" }}
@@ -55,9 +55,8 @@ export async function SitexIsland({
         [hydrationAttributes.props]: serializedProps,
       }}
     >
-      {mode === "only" ? (
-        staticChildrenTemplate
-      ) : (
+      {directStaticChildren}
+      {mode === "only" ? null : (
         <Component {...props}>{staticChildren}</Component>
       )}
     </div>

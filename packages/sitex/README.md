@@ -2,7 +2,7 @@
 
 A simpler, Vite-based React framework for building fast websites with local content.
 
-SiteX renders React routes to static HTML by default. When a page needs browser interactivity, imported React components can opt into island rendering with `client:load` or `client:only`.
+SiteX renders React routes to static HTML by default. When a page needs browser interactivity, imported React components can opt into island rendering with `client:load`, `client:only`, `client:visible`, `client:idle`, or `client:media`.
 
 ## Install
 

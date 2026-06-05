@@ -32,8 +32,9 @@ export default function IntroductionPage() {
         <a href="/docs/page-routing">Page routing</a>.
       </p>
       <p>
-        Imported components can opt into client rendering with{" "}
-        <code>client:load</code> or <code>client:only</code>. Read more in{" "}
+        Imported components can opt into client rendering with directives like{" "}
+        <code>client:load</code>, <code>client:visible</code>, and{" "}
+        <code>client:idle</code>. Read more in{" "}
         <a href="/docs/island-rendering">Island rendering</a>.
       </p>
 

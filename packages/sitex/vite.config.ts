@@ -19,10 +19,6 @@ export default defineConfig({
       neverBundle: [
         /^node:/,
         /^virtual:/,
-        "@babel/generator",
-        "@babel/parser",
-        "@babel/traverse",
-        "@babel/types",
         "fast-glob",
         "nitro",
         "nitro/vite",

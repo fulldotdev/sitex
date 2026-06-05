@@ -86,7 +86,8 @@ export default defineConfig({
       <h2 id="tsconfig">TypeScript config</h2>
       <p>
         Extend the SiteX TypeScript config so JSX client directives like{" "}
-        <code>client:load</code> and <code>client:only</code> are accepted.
+        <code>client:load</code>, <code>client:visible</code>, and{" "}
+        <code>client:media</code> are accepted.
       </p>
       <CodeBlock
         lang="json"

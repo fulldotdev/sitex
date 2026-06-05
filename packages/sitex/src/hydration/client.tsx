@@ -38,6 +38,9 @@ async function bootHydrationEntry(element: HTMLElement) {
     child.hasAttribute(hydrationAttributes.staticChildren)
   )
   const staticChildrenHtml = staticChildrenElement?.innerHTML
+
+  staticChildrenElement?.remove()
+
   const staticChildren = staticChildrenElement
     ? createElement("div", {
         [hydrationAttributes.staticChildren]: "",

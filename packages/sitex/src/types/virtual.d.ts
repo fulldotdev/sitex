@@ -18,6 +18,7 @@ declare module "virtual:sitex-render" {
 
   type RenderOptions = {
     assetTags?: string
+    islandClientPreamble?: string
     islandClientSrc?: string
     request?: Request
   }

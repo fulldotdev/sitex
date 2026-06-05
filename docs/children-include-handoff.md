@@ -256,6 +256,9 @@ domain-based directive style:
 ```tsx
 client:load
 client:only
+client:visible
+client:idle
+client:media
 server:defer
 children:include
 ```

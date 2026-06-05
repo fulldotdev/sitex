@@ -9,6 +9,9 @@ export const content = {
     { href: "#overview", label: "Overview" },
     { href: "#client-load", label: "client:load" },
     { href: "#client-only", label: "client:only" },
+    { href: "#client-visible", label: "client:visible" },
+    { href: "#client-idle", label: "client:idle" },
+    { href: "#client-media", label: "client:media" },
     { href: "#boundaries", label: "Boundaries" },
   ],
 }
@@ -58,6 +61,54 @@ export default function Page() {
 
 export default function Page() {
   return <Search client:only />
+}`}
+      />
+
+      <h2 id="client-visible">
+        <code>client:visible</code>
+      </h2>
+      <p>
+        Add <code>client:visible</code> when a component should render as static
+        HTML first and hydrate when it enters the viewport.
+      </p>
+      <CodeBlock
+        lang="tsx"
+        code={`import Comments from "@/components/comments"
+
+export default function Page() {
+  return <Comments client:visible />
+}`}
+      />
+
+      <h2 id="client-idle">
+        <code>client:idle</code>
+      </h2>
+      <p>
+        Add <code>client:idle</code> when a component should render as static
+        HTML first and hydrate after the browser has idle time.
+      </p>
+      <CodeBlock
+        lang="tsx"
+        code={`import Newsletter from "@/components/newsletter"
+
+export default function Page() {
+  return <Newsletter client:idle />
+}`}
+      />
+
+      <h2 id="client-media">
+        <code>client:media</code>
+      </h2>
+      <p>
+        Add <code>client:media</code> with a media query when a component should
+        hydrate only after that query matches.
+      </p>
+      <CodeBlock
+        lang="tsx"
+        code={`import DesktopNav from "@/components/desktop-nav"
+
+export default function Page() {
+  return <DesktopNav client:media="(min-width: 64rem)" />
 }`}
       />
 
