@@ -22,6 +22,7 @@ const docsPagePaths = [
   "/docs/installation",
   "/docs/page-routing",
   "/docs/content",
+  "/docs/rendering-and-assets",
   "/docs/island-rendering",
   "/docs/folder-structure",
 ]

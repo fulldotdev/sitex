@@ -37,6 +37,11 @@ export default function IntroductionPage() {
         <code>client:idle</code>. Read more in{" "}
         <a href="/docs/island-rendering">Island rendering</a>.
       </p>
+      <p>
+        Static routes, server routes, route-level CSS, and island assets are
+        handled by Vite&apos;s module graph. Read more in{" "}
+        <a href="/docs/rendering-and-assets">Rendering and assets</a>.
+      </p>
 
       <h2 id="use-cases">Use cases</h2>
       <p>

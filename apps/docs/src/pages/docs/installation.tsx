@@ -86,7 +86,8 @@ export default defineConfig({
       <h2 id="tsconfig">TypeScript config</h2>
       <p>
         Extend the SiteX TypeScript config so JSX client directives like{" "}
-        <code>client:load</code>, <code>client:visible</code>, and{" "}
+        <code>client:load</code>, <code>client:only</code>,{" "}
+        <code>client:visible</code>, <code>client:idle</code>, and{" "}
         <code>client:media</code> are accepted.
       </p>
       <CodeBlock
@@ -129,6 +130,8 @@ export default defineConfig({
         <code>vp build</code> writes static HTML to <code>dist</code>. SiteX
         emits one HTML file per static route, injects the production CSS, and
         adds the island client script only when a page needs client rendering.
+        See <a href="/docs/rendering-and-assets">Rendering and assets</a> for
+        the full behavior.
       </p>
       <p>
         <code>vp preview</code> serves the built output locally, so you can

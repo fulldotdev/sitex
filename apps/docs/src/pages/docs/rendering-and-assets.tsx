@@ -1,0 +1,158 @@
+import Doc from "@/components/layouts/doc"
+import { CodeBlock } from "@/components/ui/code-block"
+
+export const content = {
+  title: "Rendering and assets",
+  description:
+    "How Sitex renders static and server routes, CSS, and island assets.",
+  order: 5,
+  tocItems: [
+    { href: "#overview", label: "Overview" },
+    { href: "#static-routes", label: "Static routes" },
+    { href: "#server-routes", label: "Server routes" },
+    { href: "#css-assets", label: "CSS assets" },
+    { href: "#island-assets", label: "Island assets" },
+  ],
+}
+
+export default function RenderingAndAssetsPage() {
+  return (
+    <Doc
+      title={content.title}
+      description={content.description}
+      path="/docs/rendering-and-assets"
+      doc={content}
+    >
+      <h2 id="overview">Overview</h2>
+      <p>
+        Sitex is static-first. A page is rendered to HTML at build time unless
+        the route explicitly opts into server rendering. Client JavaScript is
+        also opt-in: it is only added when a page contains an island directive.
+      </p>
+      <p>
+        The implementation follows Vite&apos;s module graph instead of scanning
+        raw source strings. Route modules, CSS imports, and island entries are
+        resolved as modules, which keeps development and production behavior
+        aligned with the bundler.
+      </p>
+
+      <h2 id="static-routes">Static routes</h2>
+      <p>
+        Static routes are the default. During <code>vp build</code>, Sitex
+        renders every static route to an HTML file and writes it to the build
+        output.
+      </p>
+      <CodeBlock
+        lang="tsx"
+        code={`export default function AboutPage() {
+  return (
+    <html lang="en">
+      <head>
+        <title>About</title>
+      </head>
+      <body>
+        <h1>About</h1>
+      </body>
+    </html>
+  )
+}`}
+      />
+      <p>
+        Dynamic static routes can export <code>paths</code>. Sitex renders one
+        HTML file for each path.
+      </p>
+      <CodeBlock
+        lang="tsx"
+        code={`export const paths = [
+  { params: { slug: "alpha" } },
+  { params: { slug: "beta" } },
+]
+
+export default function Page({ params }) {
+  return <h1>{params.slug}</h1>
+}`}
+      />
+
+      <h2 id="server-routes">Server routes</h2>
+      <p>
+        Export <code>render = "server"</code> when a route needs request-time
+        rendering. Static routes should stay static; use server rendering only
+        when the route actually needs the incoming request.
+      </p>
+      <CodeBlock
+        lang="tsx"
+        code={`export const render = "server"
+
+export default function RequestPage({ request }) {
+  const url = new URL(request.url)
+
+  return (
+    <html lang="en">
+      <body>
+        <h1>Server route</h1>
+        <p>{url.pathname}</p>
+      </body>
+    </html>
+  )
+}`}
+      />
+      <p>
+        In development, static routes are handled before the server renderer
+        catch-all. That keeps normal content pages fast while still allowing
+        explicit server routes.
+      </p>
+
+      <h2 id="css-assets">CSS assets</h2>
+      <p>
+        Import CSS from routes, layouts, or components. Sitex reads the route
+        module graph and injects the stylesheet links needed by the rendered
+        route.
+      </p>
+      <CodeBlock
+        lang="tsx"
+        code={`import "@/styles/globals.css"
+
+export default function BaseLayout({ children }) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  )
+}`}
+      />
+      <p>
+        This keeps CSS ownership local to the modules that use it while still
+        letting Vite bundle and fingerprint production stylesheets.
+      </p>
+
+      <h2 id="island-assets">Island assets</h2>
+      <p>
+        Pages without islands do not receive the island client script. When a
+        page contains an island, Sitex injects the island client and the assets
+        Vite associates with that client entry.
+      </p>
+      <CodeBlock
+        lang="tsx"
+        code={`import Sidebar from "@/components/sidebar"
+import CopyButton from "@/components/copy-button"
+
+export default function DocsPage() {
+  return (
+    <Sidebar client:idle>
+      <article>
+        <h1>Docs</h1>
+        <CopyButton client:visible value="pnpm build" />
+      </article>
+    </Sidebar>
+  )
+}`}
+      />
+      <p>
+        Use lazy island modes when immediate hydration is not required. A
+        sidebar that is useful as static HTML can hydrate with{" "}
+        <code>client:idle</code>. Repeated below-the-fold controls can hydrate
+        with <code>client:visible</code>.
+      </p>
+    </Doc>
+  )
+}

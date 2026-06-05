@@ -8,6 +8,8 @@ export const content = {
     { href: "#overview", label: "Overview" },
     { href: "#route-files", label: "Route files" },
     { href: "#index-routes", label: "Index routes" },
+    { href: "#dynamic-routes", label: "Dynamic routes" },
+    { href: "#server-routes", label: "Server routes" },
   ],
 }
 
@@ -24,6 +26,11 @@ export default function PageRoutingPage() {
         Sitex uses file-based routing. TSX files in <code>src/pages</code>{" "}
         become static routes. This is the required part of the folder structure
         explained in <a href="/docs/folder-structure">Folder structure</a>.
+      </p>
+      <p>
+        Routes are static unless they export <code>render = "server"</code>. See{" "}
+        <a href="/docs/rendering-and-assets">Rendering and assets</a> for how
+        static and server routes are rendered.
       </p>
 
       <h2 id="route-files">Route files</h2>
@@ -54,6 +61,30 @@ export default function PageRoutingPage() {
           <code>src/pages/docs/index.tsx</code> becomes <code>/docs</code>.
         </li>
       </ol>
+
+      <h2 id="dynamic-routes">Dynamic routes</h2>
+      <p>
+        A route segment wrapped in brackets becomes a route parameter. Static
+        dynamic routes must export <code>paths</code>, so Sitex knows which HTML
+        files to build.
+      </p>
+      <ol>
+        <li>
+          <code>src/pages/blog/[slug].tsx</code> can become{" "}
+          <code>/blog/hello-world</code>.
+        </li>
+        <li>
+          Each entry in <code>paths</code> provides the params for one generated
+          page.
+        </li>
+      </ol>
+
+      <h2 id="server-routes">Server routes</h2>
+      <p>
+        Export <code>render = "server"</code> for request-time routes. Server
+        routes can read the incoming <code>request</code> from page context and
+        are not written as static HTML files.
+      </p>
     </Doc>
   )
 }

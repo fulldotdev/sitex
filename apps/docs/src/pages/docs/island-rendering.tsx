@@ -4,9 +4,10 @@ import { CodeBlock } from "@/components/ui/code-block"
 export const content = {
   title: "Island rendering",
   description: "Client rendering with explicit island boundaries.",
-  order: 5,
+  order: 6,
   tocItems: [
     { href: "#overview", label: "Overview" },
+    { href: "#choosing-directives", label: "Choosing directives" },
     { href: "#client-load", label: "client:load" },
     { href: "#client-only", label: "client:only" },
     { href: "#client-visible", label: "client:visible" },
@@ -30,21 +31,49 @@ export default function IslandRenderingPage() {
         client directive. That directive creates an island: a small
         client-rendered boundary inside the static page.
       </p>
+      <p>
+        The island client script is only added to pages that actually contain an
+        island. Pages without client directives stay static HTML.
+      </p>
+
+      <h2 id="choosing-directives">Choosing directives</h2>
+      <p>
+        Use the least eager directive that still matches the interaction. This
+        keeps the page responsive without loading every island at the same time.
+      </p>
+      <ol>
+        <li>
+          Use <code>client:load</code> for controls that must be interactive as
+          soon as possible.
+        </li>
+        <li>
+          Use <code>client:idle</code> for page chrome that is already useful as
+          static HTML, such as a sidebar or theme-aware shell.
+        </li>
+        <li>
+          Use <code>client:visible</code> for below-the-fold widgets and
+          repeated controls, such as copy buttons in long documentation pages.
+        </li>
+        <li>
+          Use <code>client:media</code> for viewport-specific UI that should
+          hydrate only when a media query matches.
+        </li>
+      </ol>
 
       <h2 id="client-load">
         <code>client:load</code>
       </h2>
       <p>
         Add <code>client:load</code> to an imported React component when it
-        should render as static HTML first and then become interactive in the
-        browser.
+        should render as static HTML first and hydrate immediately in the
+        browser. Reach for this when delayed interactivity would be noticeable.
       </p>
       <CodeBlock
         lang="tsx"
-        code={`import Sidebar from "@/components/sidebar"
+        code={`import Search from "@/components/search"
 
 export default function Page() {
-  return <Sidebar client:load />
+  return <Search client:load />
 }`}
       />
 
@@ -69,14 +98,15 @@ export default function Page() {
       </h2>
       <p>
         Add <code>client:visible</code> when a component should render as static
-        HTML first and hydrate when it enters the viewport.
+        HTML first and hydrate when it enters the viewport. This works well for
+        repeated widgets on long pages.
       </p>
       <CodeBlock
         lang="tsx"
-        code={`import Comments from "@/components/comments"
+        code={`import CopyButton from "@/components/copy-button"
 
 export default function Page() {
-  return <Comments client:visible />
+  return <CopyButton client:visible value="pnpm build" />
 }`}
       />
 
@@ -85,14 +115,15 @@ export default function Page() {
       </h2>
       <p>
         Add <code>client:idle</code> when a component should render as static
-        HTML first and hydrate after the browser has idle time.
+        HTML first and hydrate after the browser has idle time. This is a good
+        fit for UI that enhances already-rendered markup.
       </p>
       <CodeBlock
         lang="tsx"
-        code={`import Newsletter from "@/components/newsletter"
+        code={`import Sidebar from "@/components/sidebar"
 
 export default function Page() {
-  return <Newsletter client:idle />
+  return <Sidebar client:idle />
 }`}
       />
 
@@ -124,6 +155,11 @@ export default function Page() {
       <p>
         Children are rendered as static slot HTML. If those children contain
         another island, it renders independently with its own client boundary.
+      </p>
+      <p>
+        Sitex reads the static children marker from the direct children of the
+        island root. Nested islands therefore cannot accidentally steal their
+        parent island&apos;s static children.
       </p>
     </Doc>
   )

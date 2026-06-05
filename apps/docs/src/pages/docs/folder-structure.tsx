@@ -5,7 +5,7 @@ export const content = {
   title: "Folder structure",
   description:
     "What Sitex requires and how we recommend organizing content sites.",
-  order: 6,
+  order: 7,
   tocItems: [
     { href: "#pages-folder", label: "pages folder for routing" },
     {
@@ -47,6 +47,10 @@ export default function FolderStructurePage() {
     index.tsx
     docs/
       index.tsx
+      content.tsx
+      island-rendering.tsx
+      page-routing.tsx
+      rendering-and-assets.tsx
       folder-structure.tsx`}
       />
 
@@ -69,7 +73,9 @@ export default function FolderStructurePage() {
       </ol>
       <p>
         Import CSS from routes, layouts, or components. SiteX uses Vite's build
-        graph to find the production CSS assets.
+        graph to find the production CSS assets. See{" "}
+        <a href="/docs/rendering-and-assets">Rendering and assets</a> for the
+        build behavior.
       </p>
       <p>
         Keep route files thin. A route should choose a layout and pass content
