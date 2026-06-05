@@ -51,7 +51,7 @@ export default function PageRoutingPage() {
           <code>src/pages/index.tsx</code> becomes <code>/</code>.
         </li>
         <li>
-          <code>src/pages/docs/index.tsx</code> becomes <code>/docs/</code>.
+          <code>src/pages/docs/index.tsx</code> becomes <code>/docs</code>.
         </li>
       </ol>
     </Doc>

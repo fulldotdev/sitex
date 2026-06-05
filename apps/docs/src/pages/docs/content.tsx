@@ -113,8 +113,10 @@ export default function BlogPage() {
       />
       <p>
         <code>getPages("/blog")</code> returns pages whose paths start with{" "}
-        <code>/blog</code>. The return value is async, matching the shape of
-        content APIs like Astro&apos;s <code>getCollection</code>.
+        <code>/blog</code>. Use <code>page.path</code> directly in links; it
+        follows the configured trailing-slash style. The return value is async,
+        matching the shape of content APIs like Astro&apos;s{" "}
+        <code>getCollection</code>.
       </p>
 
       <h2 id="get-page">getPage</h2>

@@ -73,6 +73,10 @@ type ContentRoute = {
   path: string
 }
 
+export type SitexOptions = {
+  trailingSlash?: boolean
+}
+
 const isHtmlRequest = (req: Connect.IncomingMessage) => {
   if (!req.url || (req.method !== "GET" && req.method !== "HEAD")) return false
   if (req.url.includes(".")) return false
@@ -85,8 +89,11 @@ function shouldGenerateContentTypes() {
   return process.env.SITEX_CONTENT !== "0"
 }
 
-export function sitex(): PluginOption[] {
-  const plugins: PluginOption[] = [sitexPlugin()]
+export function sitex(options: SitexOptions = {}): PluginOption[] {
+  const resolvedOptions = {
+    trailingSlash: options.trailingSlash ?? false,
+  }
+  const plugins: PluginOption[] = [sitexPlugin(resolvedOptions)]
 
   if (
     process.env.SITEX_INTERNAL_RENDER !== "1" &&
@@ -105,7 +112,7 @@ export function sitex(): PluginOption[] {
   return plugins
 }
 
-function sitexPlugin(): Plugin {
+function sitexPlugin(options: Required<SitexOptions>): Plugin {
   let root = process.cwd()
   let config: ResolvedConfig
   let cleanedBuildOutput = false
@@ -197,7 +204,7 @@ function sitexPlugin(): Plugin {
         }
 
         if (id === resolvedVirtualContentId) {
-          return createJavaScriptModule(createContentModuleCode())
+          return createJavaScriptModule(createContentModuleCode(options))
         }
       },
     },
@@ -216,7 +223,7 @@ function sitexPlugin(): Plugin {
 
     configureServer(server: ViteDevServer) {
       if (shouldGenerateContentTypes()) {
-        void writeContentTypesFromServer(root, server).catch(
+        void writeContentTypesFromServer(root, server, options).catch(
           (error: unknown) => {
             server.config.logger.error(formatContentTypeError(error))
           }
@@ -277,7 +284,11 @@ function sitexPlugin(): Plugin {
           }
 
           const url = req.url?.split("?")[0] ?? "/"
-          const file = routePathToHtmlFile(path.join(root, "dist"), url)
+          const file = routePathToHtmlFile(
+            path.join(root, "dist"),
+            url,
+            options.trailingSlash
+          )
 
           try {
             const html = await readFile(file, "utf8")
@@ -293,21 +304,18 @@ function sitexPlugin(): Plugin {
     },
 
     hotUpdate: {
-      async handler(options) {
-        const file = normalizePath(options.file)
+      async handler(update) {
+        const file = normalizePath(update.file)
 
         if (!shouldReloadForFile(file)) return
 
-        invalidateVirtualModules(
-          this.environment.moduleGraph,
-          options.timestamp
-        )
+        invalidateVirtualModules(this.environment.moduleGraph, update.timestamp)
 
         if (
           shouldGenerateContentTypes() &&
           (file.includes("/src/pages/") || file.includes("/src/data/"))
         ) {
-          await writeContentTypesFromServer(root, options.server)
+          await writeContentTypesFromServer(root, update.server, options)
         }
 
         this.environment.hot.send({ type: "full-reload" })
@@ -319,7 +327,7 @@ function sitexPlugin(): Plugin {
       if (config.command !== "build" || wroteStaticHtml) return
 
       wroteStaticHtml = true
-      await writeStaticHtml(root)
+      await writeStaticHtml(root, options)
     },
   }
 }
@@ -345,7 +353,7 @@ function createBuildInput(root: string) {
   return input
 }
 
-async function writeStaticHtml(root: string) {
+async function writeStaticHtml(root: string, options: Required<SitexOptions>) {
   const publicRoot = await findBuildPublicRoot(root)
   const manifest = await readManifest(publicRoot)
   const islandClientAsset = Object.values(manifest).find(
@@ -365,7 +373,7 @@ async function writeStaticHtml(root: string) {
 
   try {
     if (shouldGenerateContentTypes()) {
-      await writeContentTypesFromServer(root, server)
+      await writeContentTypesFromServer(root, server, options)
     }
 
     const { getRoutes, injectRouteHtmlAssets, render } =
@@ -391,7 +399,7 @@ async function writeStaticHtml(root: string) {
           : undefined,
       })
 
-      await writeHtml(publicRoot, route.path, finalHtml)
+      await writeHtml(publicRoot, route.path, finalHtml, options)
     }
   } finally {
     await server.close()
@@ -404,8 +412,13 @@ async function writeStaticHtml(root: string) {
   }
 }
 
-async function writeHtml(publicRoot: string, routePath: string, html: string) {
-  const file = routePathToHtmlFile(publicRoot, routePath)
+async function writeHtml(
+  publicRoot: string,
+  routePath: string,
+  html: string,
+  options: Required<SitexOptions>
+) {
+  const file = routePathToHtmlFile(publicRoot, routePath, options.trailingSlash)
 
   await mkdir(path.dirname(file), { recursive: true })
   await writeFile(file, html)
@@ -440,7 +453,10 @@ function hasServerPagesSync(root: string) {
   })
 }
 
-async function collectContentRoutes(root: string) {
+async function collectContentRoutes(
+  root: string,
+  options: Required<SitexOptions>
+) {
   const files = await collectRouteFiles(root)
   const routes: ContentRoute[] = []
 
@@ -452,7 +468,10 @@ async function collectContentRoutes(root: string) {
     if (hasContentExport(code)) {
       routes.push({
         file,
-        path: staticPageFileToPath(file),
+        path: routePathToPublicPath(
+          staticPageFileToPath(file),
+          options.trailingSlash
+        ),
       })
     }
   }
@@ -462,9 +481,10 @@ async function collectContentRoutes(root: string) {
 
 async function collectContentPagesFromServer(
   root: string,
-  server: ViteDevServer
+  server: ViteDevServer,
+  options: Required<SitexOptions>
 ) {
-  const routes = await collectContentRoutes(root)
+  const routes = await collectContentRoutes(root, options)
   const pages: ContentPage[] = []
 
   for (const route of routes) {
@@ -485,10 +505,11 @@ async function collectContentPagesFromServer(
 
 async function writeContentTypesFromServer(
   root: string,
-  server: ViteDevServer
+  server: ViteDevServer,
+  options: Required<SitexOptions>
 ) {
   const typesFile = path.join(root, contentTypesFile)
-  const pages = await collectContentPagesFromServer(root, server)
+  const pages = await collectContentPagesFromServer(root, server, options)
 
   await mkdir(path.dirname(typesFile), { recursive: true })
   await writeFileAtomic(typesFile, await createContentTypesCode(pages))
@@ -566,7 +587,9 @@ function createVirtualRoutesCode() {
   ].join("\n")
 }
 
-function createContentModuleCode() {
+function createContentModuleCode(options: Required<SitexOptions>) {
+  const trailingSlash = JSON.stringify(options.trailingSlash)
+
   return [
     `const contentModules = import.meta.glob("/src/pages/**/*.tsx", { import: "content" })`,
     `function normalizeRoutePath(path) {`,
@@ -577,6 +600,10 @@ function createContentModuleCode() {
     `  const route = file.replace(/^src\\/pages/, "").replace(/\\/index\\.tsx$/, "/").replace(/\\.tsx$/, "")`,
     `  return normalizeRoutePath(route || "/")`,
     `}`,
+    `function routePathToPublicPath(path) {`,
+    `  if (path === "/") return "/"`,
+    `  return ${trailingSlash} ? path.replace(/\\/$/, "") + "/" : path.replace(/\\/$/, "")`,
+    `}`,
     `function isRouteFile(file) {`,
     `  return !file.includes("/src/pages/examples/") && !/\\[[^\\]]+\\]/.test(file)`,
     `}`,
@@ -584,7 +611,7 @@ function createContentModuleCode() {
     `  .filter(isRouteFile)`,
     `  .map((file) => {`,
     `    const routeFile = file.replace(/^\\/+/, "")`,
-    `    return { file: routeFile, path: staticPageFileToPath(routeFile) }`,
+    `    return { file: routeFile, path: routePathToPublicPath(staticPageFileToPath(routeFile)) }`,
     `  })`,
     `async function toPage(route) {`,
     `  const load = contentModules["/" + route.file]`,
@@ -594,12 +621,14 @@ function createContentModuleCode() {
     `  return { file: route.file, path: route.path, content }`,
     `}`,
     `export async function getPages(prefix) {`,
-    `  const matches = prefix === undefined ? routeMeta : routeMeta.filter((page) => page.path.startsWith(prefix))`,
+    `  const publicPrefix = prefix === undefined ? undefined : routePathToPublicPath(normalizeRoutePath(prefix))`,
+    `  const matches = publicPrefix === undefined ? routeMeta : routeMeta.filter((page) => page.path.startsWith(publicPrefix))`,
     `  const pages = await Promise.all(matches.map(toPage))`,
     `  return pages.filter((page) => page !== undefined)`,
     `}`,
     `export async function getPage(path) {`,
-    `  const route = routeMeta.find((page) => page.path === path)`,
+    `  const publicPath = routePathToPublicPath(normalizeRoutePath(path))`,
+    `  const route = routeMeta.find((page) => page.path === publicPath)`,
     `  return route ? toPage(route) : undefined`,
     `}`,
   ].join("\n")
@@ -793,12 +822,20 @@ function createWebRequest(req: Connect.IncomingMessage) {
   })
 }
 
-function routePathToHtmlFile(root: string, routePath: string) {
+function routePathToHtmlFile(
+  root: string,
+  routePath: string,
+  trailingSlash: boolean
+) {
   const normalizedRoutePath = routePath.replace(/^\/+|\/+$/g, "")
 
-  return routePath === "/"
-    ? path.join(root, "index.html")
-    : path.join(root, normalizedRoutePath, "index.html")
+  if (routePath === "/" || normalizedRoutePath === "") {
+    return path.join(root, "index.html")
+  }
+
+  return trailingSlash
+    ? path.join(root, normalizedRoutePath, "index.html")
+    : path.join(root, `${normalizedRoutePath}.html`)
 }
 
 function staticPageFileToPath(file: string) {
@@ -879,6 +916,12 @@ function readJsonValue(
 function normalizeRoutePath(path: string) {
   if (!path || path === "/") return "/"
   return `/${path.replace(/^\/+|\/+$/g, "")}`
+}
+
+function routePathToPublicPath(path: string, trailingSlash: boolean) {
+  if (path === "/") return "/"
+
+  return trailingSlash ? `${path.replace(/\/$/, "")}/` : path.replace(/\/$/, "")
 }
 
 async function findBuildPublicRoot(root: string) {

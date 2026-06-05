@@ -9,7 +9,7 @@ export const content = {
       "A simpler, Vite-based React framework for building fast websites with local content.",
     description:
       "Sitex renders your React routes to fast static HTML by default, while island architecture lets you add browser interactivity exactly where a page needs it.",
-    buttons: [{ href: "/docs/", label: "Read the introduction" }],
+    buttons: [{ href: "/docs", label: "Read the introduction" }],
   },
 }
 

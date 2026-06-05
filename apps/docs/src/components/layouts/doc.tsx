@@ -10,8 +10,17 @@ type Props = ComponentProps<typeof Base> & {
   >
 }
 
-export default function Doc({ doc, path, children, ...props }: Props) {
-  const currentIndex = docsNavigation.findIndex((item) => item.href === path)
+function normalizePath(path: string) {
+  if (path === "/") return path
+
+  return path.replace(/\/$/, "")
+}
+
+export default function Doc({ doc, path = "/", children, ...props }: Props) {
+  const currentPath = normalizePath(path)
+  const currentIndex = docsNavigation.findIndex(
+    (item) => normalizePath(item.href) === currentPath
+  )
   const previousPage =
     currentIndex > 0 ? docsNavigation[currentIndex - 1] : undefined
   const nextPage =

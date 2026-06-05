@@ -40,7 +40,7 @@ export default function InstallationPage() {
       </p>
       <CodeBlock
         lang="text"
-        code={`Read https://sitex.full.dev/docs/installation/ and install SiteX in this project.
+        code={`Read https://sitex.full.dev/docs/installation and install SiteX in this project.
 Follow the manual install steps on that page: install the package, add the Vite plugin,
 extend the SiteX TypeScript config, add the scripts, and create the first route.`}
       />
@@ -77,6 +77,11 @@ export default defineConfig({
   plugins: [react(), sitex()],
 })`}
       />
+      <p>
+        SiteX writes slashless URLs by default. Pass{" "}
+        <code>sitex({`{ trailingSlash: true }`})</code> if you want directory
+        index output and trailing-slash paths.
+      </p>
 
       <h2 id="tsconfig">TypeScript config</h2>
       <p>

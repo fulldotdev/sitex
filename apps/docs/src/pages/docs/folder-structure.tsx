@@ -60,7 +60,7 @@ export default function FolderStructurePage() {
           <code>src/pages/index.tsx</code> maps to <code>/</code>.
         </li>
         <li>
-          <code>src/pages/docs/index.tsx</code> maps to <code>/docs/</code>.
+          <code>src/pages/docs/index.tsx</code> maps to <code>/docs</code>.
         </li>
         <li>
           <code>src/pages/docs/folder-structure.tsx</code> maps to{" "}
