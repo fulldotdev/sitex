@@ -200,7 +200,7 @@ function sitexPlugin(options: Required<SitexOptions>): Plugin {
         }
 
         if (id === resolvedVirtualRenderId) {
-          return createJavaScriptModule(createVirtualRenderCode())
+          return createJavaScriptModule(createVirtualRenderCode(root))
         }
 
         if (id === resolvedVirtualContentId) {
@@ -450,13 +450,17 @@ function collectStyleFilesSync(root: string) {
 }
 
 function hasServerPagesSync(root: string) {
+  return collectServerRouteFilesSync(root).length > 0
+}
+
+function collectServerRouteFilesSync(root: string) {
   const files = fg.sync("src/pages/**/*.tsx", {
     cwd: root,
     ignore: ["src/pages/examples/**"],
     onlyFiles: true,
   })
 
-  return files.some((file) => {
+  return files.filter((file) => {
     const code = readFileSync(path.join(root, file), "utf8")
 
     return /\bexport\s+const\s+render\s*=\s*["']server["']/.test(code)
@@ -694,7 +698,11 @@ async function createContentTypesCode(pages: ContentPage[]) {
   ].join("\n")
 }
 
-function createVirtualRenderCode() {
+function createVirtualRenderCode(root: string) {
+  const serverRouteFiles = collectServerRouteFilesSync(root).map(
+    (file) => `/${file}`
+  )
+
   return [
     `import { prerender } from "react-dom/static"`,
     `import { renderToString } from "react-dom/server"`,
@@ -702,7 +710,7 @@ function createVirtualRenderCode() {
     `import { createPageContext, matchRoute, readPageRoutes } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
     `export { getRoutes }`,
     `const serverRouteModules = import.meta.glob("/src/pages/**/*.tsx")`,
-    `const serverRouteRenderModes = import.meta.glob("/src/pages/**/*.tsx", { import: "render" })`,
+    `const serverRouteFiles = ${JSON.stringify(serverRouteFiles)}`,
     `function isRouteFile(file) {`,
     `  return !file.includes("/src/pages/examples/")`,
     `}`,
@@ -736,10 +744,8 @@ function createVirtualRenderCode() {
     `}`,
     `async function matchServerRoute(path) {`,
     `  const candidates = []`,
-    `  for (const [file, loadRenderMode] of Object.entries(serverRouteRenderModes)) {`,
+    `  for (const file of serverRouteFiles) {`,
     `    if (!isRouteFile(file)) continue`,
-    `    const renderMode = await loadRenderMode()`,
-    `    if (renderMode !== "server") continue`,
     `    const pattern = routeFileToPattern(file)`,
     `    const params = matchPathPattern(pattern, path)`,
     `    if (params) candidates.push({ file, params, pattern, score: routeScore(pattern) })`,
@@ -748,7 +754,9 @@ function createVirtualRenderCode() {
     `  const candidate = candidates[0]`,
     `  if (!candidate) return undefined`,
     `  const routeFile = candidate.file.replace(/^\\/+/, "")`,
-    `  const routes = await readPageRoutes(await serverRouteModules[candidate.file](), routeFile)`,
+    `  const loadRoute = serverRouteModules[candidate.file]`,
+    `  if (!loadRoute) return undefined`,
+    `  const routes = await readPageRoutes(await loadRoute(), routeFile)`,
     `  const match = matchRoute(routes, path)`,
     `  return match ? { params: { ...candidate.params, ...match.params }, route: match.route } : undefined`,
     `}`,
