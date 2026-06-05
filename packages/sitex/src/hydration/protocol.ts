@@ -1,10 +1,16 @@
-export const hydrationModes = ["load", "only"] as const
+export const hydrationModes = [
+  "load",
+  "only",
+  "visible",
+  "idle",
+  "media",
+] as const
 
 export type HydrationMode = (typeof hydrationModes)[number]
 
 export const hydrationAttributes = {
-  children: "data-sitex-children",
   island: "data-sitex-island",
+  media: "data-sitex-media",
   mode: "data-sitex-mode",
   props: "data-sitex-props",
   staticChildren: "data-sitex-static-children",

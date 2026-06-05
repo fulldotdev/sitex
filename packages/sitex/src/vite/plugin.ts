@@ -242,18 +242,20 @@ function sitexPlugin(options: Required<SitexOptions>): Plugin {
 
           try {
             const { render } = await importServerModule(server, virtualRenderId)
-            const initialHtml = await render(url, {
-              islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
-              request,
-            })
+            const initialHtml = await render(url, { request })
 
             if (!initialHtml) {
               next()
               return
             }
 
+            const stylesheetHrefs = readRouteStylesheetHrefs(
+              server.environments.ssr.moduleGraph,
+              root,
+              initialHtml.route.file
+            )
             const html = await render(url, {
-              assetTags: renderStylesheetTags(readDevStylesheetHrefs(server)),
+              assetTags: renderStylesheetTags(stylesheetHrefs),
               islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
               request,
             })
@@ -263,7 +265,7 @@ function sitexPlugin(options: Required<SitexOptions>): Plugin {
               return
             }
 
-            const transformed = await server.transformIndexHtml(url, html)
+            const transformed = await server.transformIndexHtml(url, html.html)
 
             res.statusCode = 200
             res.setHeader("Content-Type", "text/html")
@@ -359,7 +361,7 @@ async function writeStaticHtml(root: string, options: Required<SitexOptions>) {
   const islandClientAsset = Object.values(manifest).find(
     (entry) => entry.name === "islandClient"
   )
-  const stylesheetTags = renderStylesheetTags(readStylesheetAssets(manifest))
+  const cssAssetMap = createCssAssetMap(root, manifest)
 
   const previousInternalRender = process.env.SITEX_INTERNAL_RENDER
   process.env.SITEX_INTERNAL_RENDER = "1"
@@ -376,14 +378,14 @@ async function writeStaticHtml(root: string, options: Required<SitexOptions>) {
       await writeContentTypesFromServer(root, server, options)
     }
 
-    const { getRoutes, injectRouteHtmlAssets, render } =
+    const { getRoutes, injectRouteHtmlAssets, renderMatchedRoute } =
       await importServerModule(server, virtualRenderId)
     const routes = await getRoutes()
 
     for (const route of routes) {
       if (route.render === "server") continue
 
-      const html = await render(route.path)
+      const html = await renderMatchedRoute(route, route.params)
 
       if (!html) {
         throw new Error(`Sitex could not render route "${route.path}".`)
@@ -392,8 +394,17 @@ async function writeStaticHtml(root: string, options: Required<SitexOptions>) {
       const transformed = stripViteClientScript(
         await server.transformIndexHtml(route.path, html)
       )
+      const stylesheetAssets = readRouteStylesheetAssets(
+        server.environments.ssr.moduleGraph,
+        root,
+        route.file,
+        cssAssetMap
+      )
+      if (html.includes("data-sitex-island")) {
+        stylesheetAssets.push(...readManifestChunkCss(islandClientAsset))
+      }
       const finalHtml = injectRouteHtmlAssets(transformed, {
-        assetTags: stylesheetTags,
+        assetTags: renderStylesheetTags(stylesheetAssets),
         islandClientSrc: islandClientAsset?.file
           ? publicAssetPath(islandClientAsset.file)
           : undefined,
@@ -692,7 +703,7 @@ function createVirtualRenderCode() {
     `import { createPageContext, matchRoute, readPageRoutes } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
     `export { getRoutes }`,
     `const serverRouteModules = import.meta.glob("/src/pages/**/*.tsx")`,
-    `const serverRouteSources = import.meta.glob("/src/pages/**/*.tsx", { query: "?raw", import: "default" })`,
+    `const serverRouteRenderModes = import.meta.glob("/src/pages/**/*.tsx", { import: "render" })`,
     `function isRouteFile(file) {`,
     `  return !file.includes("/src/pages/examples/")`,
     `}`,
@@ -726,10 +737,10 @@ function createVirtualRenderCode() {
     `}`,
     `async function matchServerRoute(path) {`,
     `  const candidates = []`,
-    `  for (const [file, loadSource] of Object.entries(serverRouteSources)) {`,
+    `  for (const [file, loadRenderMode] of Object.entries(serverRouteRenderModes)) {`,
     `    if (!isRouteFile(file)) continue`,
-    `    const source = await loadSource()`,
-    `    if (!/\\bexport\\s+const\\s+render\\s*=\\s*["']server["']/.test(source)) continue`,
+    `    const renderMode = await loadRenderMode()`,
+    `    if (renderMode !== "server") continue`,
     `    const pattern = routeFileToPattern(file)`,
     `    const params = matchPathPattern(pattern, path)`,
     `    if (params) candidates.push({ file, params, pattern, score: routeScore(pattern) })`,
@@ -767,6 +778,9 @@ function createVirtualRenderCode() {
     `  }`,
     `  return result`,
     `}`,
+    `function createRenderResult(route, params, html) {`,
+    `  return { html, params, route }`,
+    `}`,
     `async function renderRouteHtml(route, params, options = {}) {`,
     `  const request = route.render === "server" ? options.request : undefined`,
     `  const context = createPageContext(route, params, request)`,
@@ -784,7 +798,11 @@ function createVirtualRenderCode() {
     `  const routes = await getRoutes()`,
     `  const match = matchRoute(routes, url)`,
     `  if (!match) return undefined`,
-    `  return renderRouteHtml(match.route, match.params, options)`,
+    `  const html = await renderRouteHtml(match.route, match.params, options)`,
+    `  return createRenderResult(match.route, match.params, html)`,
+    `}`,
+    `export async function renderMatchedRoute(route, params, options = {}) {`,
+    `  return renderRouteHtml(route, params, options)`,
     `}`,
     `export async function renderServerResponse(request, options = {}) {`,
     `  const url = new URL(request.url)`,
@@ -945,36 +963,147 @@ async function readManifest(publicRoot: string): Promise<Manifest> {
   return JSON.parse(await readFile(file, "utf8")) as Manifest
 }
 
-function readStylesheetAssets(manifest: Manifest) {
+function renderStylesheetTags(hrefs: string[]) {
+  return hrefs.map((href) => `<link href="${href}" rel="stylesheet">`).join("")
+}
+
+function readRouteStylesheetHrefs(
+  graph: EnvironmentModuleGraph,
+  root: string,
+  routeFile: string
+) {
+  return collectRouteCssFiles(graph, root, routeFile).map(devServerFilePath)
+}
+
+function readRouteStylesheetAssets(
+  graph: EnvironmentModuleGraph,
+  root: string,
+  routeFile: string,
+  cssAssetMap: Map<string, string>
+) {
   const assets = new Set<string>()
 
-  for (const entry of Object.values(manifest)) {
-    if (entry?.file?.endsWith(".css")) assets.add(publicAssetPath(entry.file))
+  for (const file of collectRouteCssFiles(graph, root, routeFile)) {
+    const asset = cssAssetMap.get(file)
 
-    for (const cssFile of entry?.css ?? []) {
-      assets.add(publicAssetPath(cssFile))
-    }
+    if (asset) assets.add(asset)
   }
 
   return [...assets]
 }
 
-function readDevStylesheetHrefs(server: ViteDevServer) {
-  const hrefs = new Set<string>()
+function collectRouteCssFiles(
+  graph: EnvironmentModuleGraph,
+  root: string,
+  routeFile: string
+) {
+  const entry = findRouteModule(graph, root, routeFile)
+  const seen = new Set<EnvironmentModuleNode>()
+  const cssFiles = new Set<string>()
 
-  for (const module of server.moduleGraph.idToModuleMap.values()) {
-    const id = module.id?.split("?")[0]
+  function visit(module: EnvironmentModuleNode | undefined) {
+    if (!module || seen.has(module)) return
 
-    if (!id?.endsWith(".css")) continue
+    seen.add(module)
 
-    hrefs.add(devServerFilePath(id))
+    const file = normalizeCssModuleFile(root, module.file ?? module.id)
+
+    if (file) cssFiles.add(file)
+
+    for (const importedModule of module.importedModules) {
+      visit(importedModule)
+    }
   }
 
-  return [...hrefs]
+  visit(entry)
+
+  return [...cssFiles]
 }
 
-function renderStylesheetTags(hrefs: string[]) {
-  return hrefs.map((href) => `<link href="${href}" rel="stylesheet">`).join("")
+function findRouteModule(
+  graph: EnvironmentModuleGraph,
+  root: string,
+  routeFile: string
+) {
+  const absoluteRouteFile = normalizePath(path.join(root, routeFile))
+
+  for (const id of [absoluteRouteFile, `/${routeFile}`, routeFile]) {
+    const module = graph.getModuleById(id)
+
+    if (module) return module
+  }
+
+  for (const module of graph.idToModuleMap.values()) {
+    const moduleFile = normalizeModuleFile(root, module.file ?? module.id)
+
+    if (moduleFile === absoluteRouteFile) return module
+  }
+}
+
+function normalizeCssModuleFile(
+  root: string,
+  value: string | null | undefined
+) {
+  const file = normalizeModuleFile(root, value)
+
+  return file?.endsWith(".css") ? file : undefined
+}
+
+function normalizeModuleFile(root: string, value: string | null | undefined) {
+  if (!value) return
+
+  const cleanValue = normalizePath(value.split("?")[0] ?? "")
+
+  if (!cleanValue) return
+
+  if (cleanValue.startsWith("/@fs/")) return cleanValue.slice(4)
+  if (path.isAbsolute(cleanValue)) return cleanValue
+  if (cleanValue.startsWith("/src/")) {
+    return normalizePath(path.join(root, cleanValue.slice(1)))
+  }
+  if (cleanValue.startsWith("src/"))
+    return normalizePath(path.join(root, cleanValue))
+}
+
+function createCssAssetMap(root: string, manifest: Manifest) {
+  const assets = new Map<string, string>()
+
+  for (const [key, entry] of Object.entries(manifest)) {
+    const source = entry.src ?? key
+
+    if (!source.endsWith(".css")) continue
+
+    const file = normalizeManifestSourceFile(root, source)
+
+    if (file) assets.set(file, publicAssetPath(entry.file))
+  }
+
+  return assets
+}
+
+function normalizeManifestSourceFile(root: string, source: string) {
+  const cleanSource = normalizePath(source.split("?")[0] ?? "")
+
+  if (path.isAbsolute(cleanSource)) return cleanSource
+  if (cleanSource.startsWith("/")) {
+    return normalizePath(path.join(root, cleanSource.slice(1)))
+  }
+
+  return normalizePath(path.join(root, cleanSource))
+}
+
+function readManifestChunkCss(entry: Manifest[string] | undefined) {
+  if (!entry) return []
+
+  const assets = new Set<string>()
+
+  if (entry.file.endsWith(".css")) assets.add(publicAssetPath(entry.file))
+
+  for (const cssFile of entry.css ?? []) {
+    assets.add(publicAssetPath(cssFile))
+  }
+
+  return [...assets]
 }
 
 function stripViteClientScript(html: string) {

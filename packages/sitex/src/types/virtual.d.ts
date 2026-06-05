@@ -22,11 +22,22 @@ declare module "virtual:sitex-render" {
     request?: Request
   }
 
+  type RenderResult = {
+    html: string
+    params: Record<string, string>
+    route: Route
+  }
+
   export function getRoutes(): Promise<Route[]>
   export function render(
     url: string,
     options?: RenderOptions
-  ): Promise<string | undefined>
+  ): Promise<RenderResult | undefined>
+  export function renderMatchedRoute(
+    route: Route,
+    params: Record<string, string>,
+    options?: RenderOptions
+  ): Promise<string>
   export function renderServerResponse(
     request: Request,
     options?: RenderOptions
@@ -55,7 +66,10 @@ declare module "sitex:content" {
 
 declare namespace React {
   interface Attributes {
+    "client:idle"?: boolean
     "client:load"?: boolean
+    "client:media"?: string
     "client:only"?: boolean
+    "client:visible"?: boolean
   }
 }

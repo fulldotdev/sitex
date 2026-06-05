@@ -39,14 +39,11 @@
   "scripts": {
     "build": "vp pack",
     "dev": "vp pack --watch",
-    "check": "vp check",
+    "check": "vp check && pnpm run test",
+    "test": "node test/hydration-compiler.test.mjs",
     "prepublishOnly": "vp run build"
   },
   "dependencies": {
-    "@babel/generator": "^7.29.1",
-    "@babel/parser": "^7.29.3",
-    "@babel/traverse": "^7.29.0",
-    "@babel/types": "^7.29.0",
     "fast-glob": "^3.3.3",
     "nitro": "catalog:",
     "quicktype-core": "^23.2.6"

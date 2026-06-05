@@ -11,6 +11,7 @@ import {
 type Props = {
   component: ComponentType<Record<string, unknown>>
   id: string
+  media?: string
   mode: HydrationMode
   props: Record<string, unknown>
   children?: ReactNode
@@ -25,6 +26,7 @@ async function renderStaticMarkup(node: ReactNode) {
 export async function SitexIsland({
   component: Component,
   id,
+  media,
   mode,
   props,
   children,
@@ -37,19 +39,27 @@ export async function SitexIsland({
       {...{ [hydrationAttributes.staticChildren]: "" }}
     />
   ) : null
+  const staticChildrenTemplate = staticChildrenHtml ? (
+    <template
+      dangerouslySetInnerHTML={{ __html: staticChildrenHtml }}
+      {...{ [hydrationAttributes.staticChildren]: "" }}
+    />
+  ) : null
 
   return (
     <div
       {...{
-        [hydrationAttributes.children]: staticChildrenHtml,
         [hydrationAttributes.island]: id,
+        [hydrationAttributes.media]: media,
         [hydrationAttributes.mode]: mode,
         [hydrationAttributes.props]: serializedProps,
       }}
     >
-      {mode === "load" ? (
+      {mode === "only" ? (
+        staticChildrenTemplate
+      ) : (
         <Component {...props}>{staticChildren}</Component>
-      ) : null}
+      )}
     </div>
   )
 }

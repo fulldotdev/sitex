@@ -1,20 +1,31 @@
-import generateModule from "@babel/generator"
-import { parse } from "@babel/parser"
-import traverseModule from "@babel/traverse"
-import * as t from "@babel/types"
+import { parseAst } from "vite-plus"
 
 import {
   createHydrationEntry,
   registerHydrationEntry,
   type HydrationRegistry,
 } from "./registry.ts"
+import { type HydrationMode } from "./protocol.ts"
 
-const generateCode = (
-  "default" in generateModule ? generateModule.default : generateModule
-) as typeof generateModule
-const traverseAst = (
-  "default" in traverseModule ? traverseModule.default : traverseModule
-) as typeof traverseModule
+type AstNode = {
+  [key: string]: unknown
+  end?: number
+  start?: number
+  type?: string
+}
+
+type HydrationEntry = ReturnType<typeof createHydrationEntry>
+
+type ClientDirective = {
+  media?: string
+  mode: HydrationMode
+}
+
+type Replacement = {
+  end: number
+  start: number
+  value: string
+}
 
 export function collectHydrationEntries(
   code: string,
@@ -24,21 +35,21 @@ export function collectHydrationEntries(
 ) {
   if (!code.includes("client:")) return
 
-  const ast = parseHydrationSource(code)
+  const ast = parseHydrationSource(code, id)
   const imports = readImports(ast, id, root)
 
-  traverseAst(ast, {
-    JSXElement(elementPath) {
-      const opening = elementPath.node.openingElement
-      const mode = readClientMode(opening)
+  walkAst(ast, (node) => {
+    if (node.type !== "JSXElement") return
 
-      if (!mode) return
+    const opening = readObject(node.openingElement)
+    const directive = opening ? readClientDirective(opening, code) : undefined
 
-      const name = readElementName(opening.name)
-      const entry = name ? imports.get(name) : undefined
+    if (!directive) return
 
-      if (entry) registerHydrationEntry(registry, entry)
-    },
+    const name = readElementName(readObject(opening?.name))
+    const entry = name ? imports.get(name) : undefined
+
+    if (entry) registerHydrationEntry(registry, entry)
   })
 }
 
@@ -48,121 +59,109 @@ export function transformClientDirectives(
   root: string,
   registry: HydrationRegistry
 ) {
-  const ast = parseHydrationSource(code)
+  const ast = parseHydrationSource(code, id)
   const imports = readImports(ast, id, root)
-  let changed = false
+  const replacements: Replacement[] = []
 
-  traverseAst(ast, {
-    JSXElement: {
-      exit(elementPath) {
-        const opening = elementPath.node.openingElement
-        const mode = readClientMode(opening)
+  walkAst(ast, (node) => {
+    if (node.type !== "JSXElement") return
 
-        if (!mode) return
+    const opening = readObject(node.openingElement)
+    const directive = opening ? readClientDirective(opening, code) : undefined
 
-        const name = readElementName(opening.name)
-        const entry = name ? imports.get(name) : undefined
+    if (!opening || !directive) return
 
-        if (!name || !entry) {
-          throw elementPath.buildCodeFrameError(
-            "Sitex client directives currently require an imported component."
-          )
-        }
+    const name = readElementName(readObject(opening.name))
+    const entry = name ? imports.get(name) : undefined
 
-        registerHydrationEntry(registry, entry)
+    if (!name || !entry) {
+      throw new Error(
+        `Sitex client directive in "${id}" requires an imported component.`
+      )
+    }
 
-        const props = t.objectExpression(
-          opening.attributes
-            .filter(
-              (attribute: t.JSXAttribute | t.JSXSpreadAttribute) =>
-                !isClientDirective(attribute)
-            )
-            .map((attribute: t.JSXAttribute | t.JSXSpreadAttribute) =>
-              jsxAttributeToObjectProperty(attribute)
-            )
-        )
+    if (directive.mode === "media" && !directive.media) {
+      throw new Error(
+        `Sitex client:media in "${id}" requires a string media query, for example client:media="(min-width: 48rem)".`
+      )
+    }
 
-        elementPath.replaceWith(
-          t.jsxElement(
-            t.jsxOpeningElement(
-              t.jsxIdentifier("SitexIsland"),
-              [
-                t.jsxAttribute(
-                  t.jsxIdentifier("component"),
-                  t.jsxExpressionContainer(t.identifier(name))
-                ),
-                t.jsxAttribute(
-                  t.jsxIdentifier("id"),
-                  t.stringLiteral(entry.id)
-                ),
-                t.jsxAttribute(t.jsxIdentifier("mode"), t.stringLiteral(mode)),
-                t.jsxAttribute(
-                  t.jsxIdentifier("props"),
-                  t.jsxExpressionContainer(props)
-                ),
-              ],
-              false
-            ),
-            t.jsxClosingElement(t.jsxIdentifier("SitexIsland")),
-            elementPath.node.children
-          )
-        )
-        changed = true
-      },
-    },
-  })
-
-  if (!changed) return
-
-  ast.program.body.unshift(
-    t.importDeclaration(
-      [
-        t.importSpecifier(
-          t.identifier("SitexIsland"),
-          t.identifier("SitexIsland")
-        ),
-      ],
-      t.stringLiteral("@fulldotdev/sitex/island")
+    registerHydrationEntry(registry, entry)
+    addIslandReplacements(
+      code,
+      node,
+      opening,
+      name,
+      entry,
+      directive,
+      replacements
     )
-  )
-
-  return generateCode(ast, {}, code).code
-}
-
-function parseHydrationSource(code: string) {
-  return parse(code, {
-    sourceType: "module",
-    plugins: ["jsx", "typescript"],
   })
+
+  if (replacements.length === 0) return
+
+  return applyReplacements(
+    `import { SitexIsland } from "@fulldotdev/sitex/island"\n${code}`,
+    replacements.map((replacement) => ({
+      ...replacement,
+      end: replacement.end + codeImportOffset,
+      start: replacement.start + codeImportOffset,
+    }))
+  )
 }
 
-function readImports(
-  ast: t.File,
-  id: string,
-  root: string
-): Map<string, ReturnType<typeof createHydrationEntry>> {
-  const imports = new Map<string, ReturnType<typeof createHydrationEntry>>()
+const codeImportOffset =
+  'import { SitexIsland } from "@fulldotdev/sitex/island"\n'.length
 
-  for (const node of ast.program.body) {
-    if (!t.isImportDeclaration(node)) continue
+function parseHydrationSource(code: string, id: string) {
+  return parseAst(
+    code,
+    { lang: "tsx", sourceType: "module" },
+    id
+  ) as unknown as AstNode
+}
 
-    for (const specifier of node.specifiers) {
-      if (
-        !t.isImportSpecifier(specifier) &&
-        !t.isImportDefaultSpecifier(specifier)
-      ) {
+function readImports(ast: AstNode, id: string, root: string) {
+  const imports = new Map<string, HydrationEntry>()
+  const body = readArray(ast.body)
+
+  for (const node of body) {
+    if (node.type !== "ImportDeclaration") continue
+
+    const source = readObject(node.source)
+    const sourceValue = source?.value
+
+    if (typeof sourceValue !== "string") continue
+
+    for (const specifier of readArray(node.specifiers)) {
+      const local = readObject(specifier.local)
+      const localName = local?.name
+
+      if (typeof localName !== "string") continue
+
+      if (specifier.type === "ImportDefaultSpecifier") {
+        imports.set(
+          localName,
+          createHydrationEntry(sourceValue, "default", id, root)
+        )
         continue
       }
 
-      const exportName = t.isImportDefaultSpecifier(specifier)
-        ? "default"
-        : t.isIdentifier(specifier.imported)
-          ? specifier.imported.name
-          : specifier.imported.value
+      if (specifier.type !== "ImportSpecifier") continue
+
+      const imported = readObject(specifier.imported)
+      const importedName =
+        typeof imported?.name === "string"
+          ? imported.name
+          : typeof imported?.value === "string"
+            ? imported.value
+            : undefined
+
+      if (!importedName) continue
 
       imports.set(
-        specifier.local.name,
-        createHydrationEntry(node.source.value, exportName, id, root)
+        localName,
+        createHydrationEntry(sourceValue, importedName, id, root)
       )
     }
   }
@@ -170,56 +169,207 @@ function readImports(
   return imports
 }
 
-function readClientMode(node: t.JSXOpeningElement) {
-  for (const attribute of node.attributes) {
-    if (
-      !t.isJSXAttribute(attribute) ||
-      !t.isJSXNamespacedName(attribute.name)
-    ) {
-      continue
-    }
-
-    if (attribute.name.namespace.name !== "client") continue
-
-    if (attribute.name.name.name === "load") return "load"
-    if (attribute.name.name.name === "only") return "only"
-  }
-}
-
-function isClientDirective(attribute: t.JSXAttribute | t.JSXSpreadAttribute) {
-  return (
-    t.isJSXAttribute(attribute) &&
-    t.isJSXNamespacedName(attribute.name) &&
-    attribute.name.namespace.name === "client"
-  )
-}
-
-function readElementName(name: t.JSXElement["openingElement"]["name"]) {
-  return t.isJSXIdentifier(name) ? name.name : undefined
-}
-
-function jsxAttributeToObjectProperty(
-  attribute: t.JSXAttribute | t.JSXSpreadAttribute
+function addIslandReplacements(
+  code: string,
+  element: AstNode,
+  opening: AstNode,
+  name: string,
+  entry: HydrationEntry,
+  directive: ClientDirective,
+  replacements: Replacement[]
 ) {
-  if (t.isJSXSpreadAttribute(attribute)) {
-    return t.spreadElement(attribute.argument)
+  const props = createPropsObjectCode(code, readArray(opening.attributes))
+  const mediaAttribute = directive.media
+    ? ` media={${JSON.stringify(directive.media)}}`
+    : ""
+  const islandOpening = `<SitexIsland component={${name}} id={${JSON.stringify(entry.id)}}${mediaAttribute} mode={${JSON.stringify(directive.mode)}} props={${props}}>`
+
+  if (opening.selfClosing === true) {
+    replacements.push({
+      start: readPosition(element.start),
+      end: readPosition(element.end),
+      value: `${islandOpening}</SitexIsland>`,
+    })
+    return
   }
 
-  if (!t.isJSXIdentifier(attribute.name)) {
+  replacements.push({
+    start: readPosition(opening.start),
+    end: readPosition(opening.end),
+    value: islandOpening,
+  })
+
+  const closing = readObject(element.closingElement)
+
+  if (closing) {
+    replacements.push({
+      start: readPosition(closing.start),
+      end: readPosition(closing.end),
+      value: "</SitexIsland>",
+    })
+  }
+}
+
+function createPropsObjectCode(code: string, attributes: AstNode[]) {
+  const properties = attributes
+    .filter((attribute) => !isClientDirective(attribute))
+    .map((attribute) => jsxAttributeToObjectPropertyCode(code, attribute))
+
+  return `{${properties.join(",")}}`
+}
+
+function jsxAttributeToObjectPropertyCode(code: string, attribute: AstNode) {
+  if (attribute.type === "JSXSpreadAttribute") {
+    const argument = readObject(attribute.argument)
+
+    return `...${sliceNode(code, argument)}`
+  }
+
+  if (attribute.type !== "JSXAttribute") {
+    throw new Error("Unsupported JSX attribute in Sitex client directive.")
+  }
+
+  const name = readObject(attribute.name)
+
+  if (name?.type !== "JSXIdentifier" || typeof name.name !== "string") {
     throw new Error("Sitex client directives only support plain JSX props.")
   }
 
-  const key = t.identifier(attribute.name.name)
+  const key = propertyKeyCode(name.name)
+  const value = readObject(attribute.value)
 
-  if (!attribute.value) return t.objectProperty(key, t.booleanLiteral(true))
-  if (t.isStringLiteral(attribute.value)) {
-    return t.objectProperty(key, t.stringLiteral(attribute.value.value))
-  }
-  if (t.isJSXExpressionContainer(attribute.value)) {
-    return t.objectProperty(key, attribute.value.expression as t.Expression)
+  if (!value) return `${key}: true`
+  if (value.type === "Literal") return `${key}: ${readLiteralCode(value)}`
+  if (value.type === "JSXExpressionContainer") {
+    return `${key}: ${sliceNode(code, readObject(value.expression))}`
   }
 
   throw new Error("Unsupported JSX prop value in Sitex client directive.")
+}
+
+function readClientDirective(
+  opening: AstNode,
+  code: string
+): ClientDirective | undefined {
+  for (const attribute of readArray(opening.attributes)) {
+    if (!isClientDirective(attribute)) continue
+
+    const name = readObject(attribute.name)
+    const directiveName = readObject(name?.name)?.name
+
+    if (directiveName === "load") return { mode: "load" }
+    if (directiveName === "only") return { mode: "only" }
+    if (directiveName === "visible") return { mode: "visible" }
+    if (directiveName === "idle") return { mode: "idle" }
+    if (directiveName === "media") {
+      return { media: readClientMedia(attribute, code), mode: "media" }
+    }
+  }
+}
+
+function readClientMedia(attribute: AstNode, code: string) {
+  const value = readObject(attribute.value)
+
+  if (!value) return
+  if (value.type === "Literal" && typeof value.value === "string")
+    return value.value
+  if (value.type !== "JSXExpressionContainer") return
+
+  const expression = readObject(value.expression)
+
+  if (expression?.type === "Literal" && typeof expression.value === "string") {
+    return expression.value
+  }
+
+  if (
+    expression?.type === "TemplateLiteral" &&
+    readArray(expression.expressions).length === 0
+  ) {
+    return sliceNode(code, expression).slice(1, -1)
+  }
+}
+
+function isClientDirective(attribute: AstNode) {
+  const name = readObject(attribute.name)
+
+  if (attribute.type !== "JSXAttribute" || name?.type !== "JSXNamespacedName") {
+    return false
+  }
+
+  return (
+    readObject(name.namespace)?.name === "client" &&
+    typeof readObject(name.name)?.name === "string"
+  )
+}
+
+function readElementName(name: AstNode | undefined) {
+  return name?.type === "JSXIdentifier" && typeof name.name === "string"
+    ? name.name
+    : undefined
+}
+
+function propertyKeyCode(name: string) {
+  return /^[$A-Z_a-z][$\w]*$/.test(name) ? name : JSON.stringify(name)
+}
+
+function readLiteralCode(node: AstNode) {
+  return typeof node.raw === "string" ? node.raw : JSON.stringify(node.value)
+}
+
+function sliceNode(code: string, node: AstNode | undefined) {
+  return code.slice(readPosition(node?.start), readPosition(node?.end))
+}
+
+function readObject(value: unknown): AstNode | undefined {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as AstNode)
+    : undefined
+}
+
+function readArray(value: unknown): AstNode[] {
+  return Array.isArray(value) ? (value.filter(readObject) as AstNode[]) : []
+}
+
+function readPosition(value: unknown) {
+  if (typeof value !== "number") {
+    throw new Error("Sitex received an AST node without source positions.")
+  }
+
+  return value
+}
+
+function walkAst(node: AstNode, visit: (node: AstNode) => void) {
+  visit(node)
+
+  for (const value of Object.values(node)) {
+    if (Array.isArray(value)) {
+      for (const item of value) {
+        const child = readObject(item)
+
+        if (child) walkAst(child, visit)
+      }
+      continue
+    }
+
+    const child = readObject(value)
+
+    if (child) walkAst(child, visit)
+  }
+}
+
+function applyReplacements(code: string, replacements: Replacement[]) {
+  let result = code
+
+  for (const replacement of [...replacements].sort(
+    (a, b) => b.start - a.start
+  )) {
+    result =
+      result.slice(0, replacement.start) +
+      replacement.value +
+      result.slice(replacement.end)
+  }
+
+  return result
 }
 
 export { collectHydrationEntries as collectIslands }
