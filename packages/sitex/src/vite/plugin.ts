@@ -1011,7 +1011,10 @@ function collectRouteCssFiles(
 
     const file = normalizeCssModuleFile(root, module.file ?? module.id)
 
-    if (file) cssFiles.add(file)
+    if (file) {
+      cssFiles.add(file)
+      return
+    }
 
     for (const importedModule of module.importedModules) {
       visit(importedModule)
