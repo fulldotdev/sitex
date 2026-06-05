@@ -1,0 +1,81 @@
+---
+layout: "doc"
+title: "Page routing"
+description: "Map TSX and MDX files in the pages folder to routes."
+order: 3
+tocItems:
+  - href: "#overview"
+    label: "Overview"
+  - href: "#route-files"
+    label: "Route files"
+  - href: "#index-routes"
+    label: "Index routes"
+  - href: "#dynamic-routes"
+    label: "Dynamic routes"
+  - href: "#server-routes"
+    label: "Server routes"
+---
+
+<h2 id="overview">Overview</h2>
+<p>
+  Sitex uses file-based routing. TSX and MDX files in <code>src/pages</code>{" "}
+  become routes. This is the required part of the folder structure explained in{" "}
+  <a href="/docs/folder-structure">Folder structure</a>.
+</p>
+<p>
+  Routes are static unless they export <code>render = "server"</code>. See{" "}
+  <a href="/docs/rendering-and-assets">Rendering and assets</a> for how static
+  and server routes are rendered.
+</p>
+
+<h2 id="route-files">Route files</h2>
+<p>
+  A TSX route exports the page component for one URL. An MDX route uses
+  frontmatter to choose a layout and renders its body as that layout's children.
+</p>
+<ol>
+  <li>
+    <code>src/pages/about.tsx</code> becomes <code>/about</code>.
+  </li>
+  <li>
+    <code>src/pages/docs/page-routing.mdx</code> becomes{" "}
+    <code>/docs/page-routing</code>.
+  </li>
+</ol>
+
+<h2 id="index-routes">Index routes</h2>
+<p>
+  An <code>index.tsx</code> or <code>index.mdx</code> file maps to its parent
+  folder. This keeps root pages and section landing pages explicit.
+</p>
+<ol>
+  <li>
+    <code>src/pages/index.tsx</code> becomes <code>/</code>.
+  </li>
+  <li>
+    <code>src/pages/docs/index.mdx</code> becomes <code>/docs</code>.
+  </li>
+</ol>
+
+<h2 id="dynamic-routes">Dynamic routes</h2>
+<p>
+  A route segment wrapped in brackets becomes a route parameter. Static dynamic
+  routes must export <code>paths</code>, so Sitex knows which HTML files to
+  build.
+</p>
+<ol>
+  <li>
+    <code>src/pages/blog/[slug].tsx</code> can become{" "}
+    <code>/blog/hello-world</code>.
+  </li>
+  <li>
+    Each entry in <code>paths</code> provides the params for one generated page.
+  </li>
+</ol>
+
+<h2 id="server-routes">Server routes</h2>
+<p>
+  Export <code>render = "server"</code> for request-time routes. Server routes
+  can read the incoming <code>request</code> from page context and are not
+  written as static HTML files.
+</p>

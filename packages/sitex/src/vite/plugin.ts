@@ -17,7 +17,7 @@ import {
 } from "vite-plus"
 
 import { randomUUID } from "node:crypto"
-import { readFileSync } from "node:fs"
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
 import {
   access,
   mkdir,
@@ -55,6 +55,7 @@ const resolvedVirtualRenderId = `\0${virtualRenderId}`
 const virtualPagesId = "sitex:pages"
 const resolvedVirtualPagesId = `\0${virtualPagesId}`
 const pagesTypesFile = ".sitex/pages.d.ts"
+const clientBuildDir = ".sitex/client"
 const mdxTypecheckDir = ".sitex/typecheck"
 
 type JsonValue =
@@ -111,7 +112,28 @@ export function sitex(options: SitexOptions = {}): PluginOption[] {
     )
   }
 
+  plugins.push(sitexBuildInputPlugin())
+
   return plugins
+}
+
+function sitexBuildInputPlugin(): Plugin {
+  return {
+    name: "sitex:build-input",
+    enforce: "post",
+
+    config(userConfig): UserConfig {
+      const configRoot = path.resolve(userConfig.root ?? process.cwd())
+
+      return {
+        build: {
+          rollupOptions: {
+            input: createBuildInput(configRoot),
+          },
+        },
+      }
+    },
+  }
 }
 
 function sitexPlugin(options: Required<SitexOptions>): Plugin {
@@ -137,7 +159,7 @@ function sitexPlugin(options: Required<SitexOptions>): Plugin {
           manifest: true,
           outDir: "dist",
           emptyOutDir: false,
-          rolldownOptions: {
+          rollupOptions: {
             input: createBuildInput(configRoot),
           },
         },
@@ -359,17 +381,41 @@ function createJavaScriptModule(code: string) {
 }
 
 function createBuildInput(root: string) {
+  const clientEntries = writeClientBuildEntriesSync(root)
   const input: Record<string, string> = {
-    islandClient: islandClientInput,
+    islandClient: clientEntries.islandClient,
   }
 
-  for (const file of collectStyleFilesSync(root)) {
+  for (const [file, entry] of clientEntries.styles) {
     const name = file.replace(/^src\//, "").replace(/\.css$/, "")
 
-    input[name] = normalizePath(path.join(root, file))
+    input[name] = entry
   }
 
   return input
+}
+
+function writeClientBuildEntriesSync(root: string) {
+  const clientRoot = path.join(root, clientBuildDir)
+  const styles = new Map<string, string>()
+
+  mkdirSync(clientRoot, { recursive: true })
+
+  const islandClient = path.join(clientRoot, "island-client.ts")
+  writeFileSync(islandClient, `import ${JSON.stringify(islandClientInput)}\n`)
+
+  for (const file of collectStyleFilesSync(root)) {
+    const entry = path.join(
+      clientRoot,
+      `${file.replace(/^src\//, "").replace(/\.css$/, "")}.ts`
+    )
+
+    mkdirSync(path.dirname(entry), { recursive: true })
+    writeFileSync(entry, `import ${JSON.stringify(path.join(root, file))}\n`)
+    styles.set(file, entry)
+  }
+
+  return { islandClient, styles }
 }
 
 async function writeStaticHtml(root: string, options: Required<SitexOptions>) {
@@ -1191,12 +1237,17 @@ async function findBuildPublicRoot(root: string) {
     }
   }
 
-  throw new Error("Sitex could not find the Vite manifest after build.")
+  await mkdir(path.join(root, "dist"), { recursive: true })
+  return path.join(root, "dist")
 }
 
 async function readManifest(publicRoot: string): Promise<Manifest> {
   const file = path.join(publicRoot, ".vite/manifest.json")
-  return JSON.parse(await readFile(file, "utf8")) as Manifest
+  try {
+    return JSON.parse(await readFile(file, "utf8")) as Manifest
+  } catch {
+    return {}
+  }
 }
 
 function renderStylesheetTags(hrefs: string[]) {
@@ -1314,7 +1365,15 @@ function createCssAssetMap(root: string, manifest: Manifest) {
   for (const [key, entry] of Object.entries(manifest)) {
     const source = entry.src ?? key
 
-    if (!source.endsWith(".css")) continue
+    if (!source.endsWith(".css")) {
+      const generatedCssFile = readGeneratedStyleEntryCssFile(root, entry)
+
+      if (generatedCssFile) {
+        assets.set(generatedCssFile.file, publicAssetPath(generatedCssFile.css))
+      }
+
+      continue
+    }
 
     const file = normalizeManifestSourceFile(root, source)
 
@@ -1322,6 +1381,27 @@ function createCssAssetMap(root: string, manifest: Manifest) {
   }
 
   return assets
+}
+
+function readGeneratedStyleEntryCssFile(root: string, entry: Manifest[string]) {
+  if (!entry.css?.[0]) return
+  if (!entry.name) return
+
+  const css = entry.css[0]
+  const file = path.join(root, "src", `${entry.name}.css`)
+
+  return css && readFileSyncSafe(file)
+    ? { css, file: normalizePath(file) }
+    : undefined
+}
+
+function readFileSyncSafe(file: string) {
+  try {
+    readFileSync(file)
+    return true
+  } catch {
+    return false
+  }
 }
 
 function normalizeManifestSourceFile(root: string, source: string) {

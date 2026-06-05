@@ -1,29 +1,27 @@
-import Doc from "@/components/layouts/doc"
+---
+layout: "doc"
+title: "Pages API"
+description: "Share route metadata with typed getPages and getPage helpers."
+order: 4
+tocItems:
+  - href: "#overview"
+    label: "Overview"
+  - href: "#data-export"
+    label: "data export"
+  - href: "#mdx-pages"
+    label: "MDX pages"
+  - href: "#get-pages"
+    label: "getPages"
+  - href: "#get-page"
+    label: "getPage"
+  - href: "#typing"
+    label: "Typing"
+  - href: "#limits"
+    label: "Limits"
+---
+
 import { CodeBlock } from "@/components/ui/code-block"
 
-export const data = {
-  title: "Pages API",
-  description: "Share route metadata with typed getPages and getPage helpers.",
-  order: 4,
-  tocItems: [
-    { href: "#overview", label: "Overview" },
-    { href: "#data-export", label: "data export" },
-    { href: "#mdx-pages", label: "MDX pages" },
-    { href: "#get-pages", label: "getPages" },
-    { href: "#get-page", label: "getPage" },
-    { href: "#typing", label: "Typing" },
-    { href: "#limits", label: "Limits" },
-  ],
-}
-
-export default function ContentPage() {
-  return (
-    <Doc
-      title={data.title}
-      description={data.description}
-      path="/docs/content"
-      doc={data}
-    >
       <h2 id="overview">Overview</h2>
       <p>
         Route files can export a <code>data</code> object next to the page
@@ -46,11 +44,12 @@ export default function ContentPage() {
       <CodeBlock
         lang="tsx"
         code={`type PostContent = {
-  title: string
-  description: string
-  publishedAt: string
-  author: string
-  tags: string[]
+
+title: string
+description: string
+publishedAt: string
+author: string
+tags: string[]
 }
 
 export const data = {
@@ -86,9 +85,11 @@ export default function PostPage() {
       <CodeBlock
         lang="text"
         code={`---
+
 layout: blog/post
 title: Building content sites with React
 description: How route-owned content keeps pages local and reusable.
+
 ---
 
 # Building content sites with React
@@ -101,8 +102,8 @@ This body is rendered as React children inside the layout.`}
 import type { MarkdownLayoutProps } from "@fulldotdev/sitex"
 
 type Props = MarkdownLayoutProps<{
-  title: string
-  description: string
+title: string
+description: string
 }>
 
 export default function BlogPostLayout({
@@ -124,6 +125,12 @@ export default function BlogPostLayout({
         visible through <code>getPage</code> and <code>getPages</code>. It is
         not passed to the layout component. Page data cannot define{" "}
         <code>path</code> or <code>children</code>.
+      </p>
+      <p>
+        During builds, Sitex also writes generated TSX mirrors for MDX pages
+        under <code>.sitex/typecheck</code>. Those files import the selected
+        layout and spread the frontmatter into it, so <code>tsc</code> reports
+        the same prop errors you would get from a hand-written TSX route.
       </p>
 
       <h2 id="get-pages">getPages</h2>
@@ -184,57 +191,56 @@ export default function FeaturedPost() {
     return null
   }
 
-  return (
-    <aside>
-      <p>Featured post</p>
-      <a href={post.path}>{post.title}</a>
-      <p>{post.description}</p>
-      <time dateTime={post.publishedAt}>
-        {post.publishedAt}
-      </time>
-    </aside>
-  )
+return (
+
+<aside>
+<p>Featured post</p>
+<a href={post.path}>{post.title}</a>
+<p>{post.description}</p>
+<time dateTime={post.publishedAt}>
+{post.publishedAt}
+</time>
+</aside>
+)
 }`}
-      />
-      <p>
-        The return value is <code>Page | undefined</code>, so missing paths are
-        explicit.
-      </p>
+/>
+<p>
+The return value is <code>Page | undefined</code>, so missing paths are
+explicit.
+</p>
 
       <h2 id="typing">Typing</h2>
       <p>
-        Sitex generates types for <code>sitex:pages</code> from the actual{" "}
-        <code>data</code> exports in <code>src/pages</code>. Editors can then
-        infer fields like <code>title</code>, <code>description</code>,{" "}
-        <code>publishedAt</code>, and <code>tags</code> when you call{" "}
-        <code>getPages</code> or <code>getPage</code>.
+        Sitex has two TypeScript surfaces for page data. Generated module types
+        describe what <code>getPages</code> and <code>getPage</code> return.
+        Generated MDX mirrors check frontmatter against the selected layout
+        component props.
       </p>
       <CodeBlock
         lang="ts"
         code={`type Page = {
-  path: string
-  title: string
-  description: string
-  publishedAt?: string
-  author?: string
-  tags?: string[]
+
+path: string
+title: string
+description: string
+publishedAt?: string
+author?: string
+tags?: string[]
 }`}
       />
       <p>
-        Generated types describe what exists in the project. If you want to
-        enforce a consistent shape across all blog posts, give the{" "}
-        <code>data</code> export its own type. Prefer <code>satisfies</code>,
-        because it checks the object while preserving the inferred values Sitex
-        reads.
+        In TSX routes, use <code>satisfies</code> when you want to enforce a
+        consistent shape for an exported <code>data</code> object while
+        preserving the inferred values Sitex reads.
       </p>
       <CodeBlock
         lang="ts"
         code={`type PostContent = {
-  title: string
-  description: string
-  publishedAt: string
-  author: string
-  tags: string[]
+title: string
+description: string
+publishedAt: string
+author: string
+tags: string[]
 }
 
 export const data = {
@@ -246,8 +252,9 @@ export const data = {
 } satisfies PostContent`}
       />
       <p>
-        This is similar to Astro content collections: generated types make reads
-        convenient, and explicit authoring types keep entries consistent.
+        In MDX routes, put that authoring contract on the layout props instead.
+        The frontmatter is checked by passing it to the actual layout component
+        in the generated typecheck mirror.
       </p>
 
       <h2 id="limits">Limits</h2>
@@ -261,7 +268,7 @@ export const data = {
         code={`import { defaultAuthor } from "@/data/authors"
 
 function createTags() {
-  return ["react", "content"]
+return ["react", "content"]
 }
 
 export const data = {
@@ -289,6 +296,3 @@ export const data = {
         <code>data</code>. That split keeps route files local while still giving
         the rest of the site typed content data.
       </p>
-    </Doc>
-  )
-}
