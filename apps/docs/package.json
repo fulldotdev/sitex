@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vp dev --host 127.0.0.1 --port 4323",
-    "build": "tsc && vp build",
+    "build": "vp build && tsc --noEmit",
     "preview": "vp preview --host 127.0.0.1 --port 4323"
   },
   "dependencies": {

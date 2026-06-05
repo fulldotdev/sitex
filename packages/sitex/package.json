@@ -46,7 +46,9 @@
   "dependencies": {
     "fast-glob": "^3.3.3",
     "nitro": "catalog:",
-    "quicktype-core": "^23.2.6"
+    "quicktype-core": "^23.2.6",
+    "satteri": "catalog:",
+    "yaml": "catalog:"
   },
   "peerDependencies": {
     "react": ">=19",

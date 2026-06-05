@@ -1,7 +1,7 @@
 import Doc from "@/components/layouts/doc"
 import { CodeBlock } from "@/components/ui/code-block"
 
-export const content = {
+export const data = {
   title: "Island rendering",
   description: "Client rendering with explicit island boundaries.",
   order: 6,
@@ -20,10 +20,10 @@ export const content = {
 export default function IslandRenderingPage() {
   return (
     <Doc
-      title={content.title}
-      description={content.description}
+      title={data.title}
+      description={data.description}
       path="/docs/island-rendering"
-      doc={content}
+      doc={data}
     >
       <h2 id="overview">Overview</h2>
       <p>

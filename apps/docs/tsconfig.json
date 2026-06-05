@@ -5,9 +5,11 @@
     "src/components/blocks/**/*",
     "src/components/layouts/**/*",
     "src/components/ui/**/*",
+    "src/layouts/**/*",
     "src/components/theme-provider.tsx",
     "src/lib/**/*",
     ".sitex/**/*.d.ts",
+    ".sitex/typecheck/**/*.tsx",
     "vite.config.ts"
   ],
   "exclude": ["dist"],

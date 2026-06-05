@@ -1,13 +1,14 @@
 import Doc from "@/components/layouts/doc"
 import { CodeBlock } from "@/components/ui/code-block"
 
-export const content = {
-  title: "Content API",
+export const data = {
+  title: "Pages API",
   description: "Share route metadata with typed getPages and getPage helpers.",
   order: 4,
   tocItems: [
     { href: "#overview", label: "Overview" },
-    { href: "#content-export", label: "content export" },
+    { href: "#data-export", label: "data export" },
+    { href: "#mdx-pages", label: "MDX pages" },
     { href: "#get-pages", label: "getPages" },
     { href: "#get-page", label: "getPage" },
     { href: "#typing", label: "Typing" },
@@ -18,16 +19,16 @@ export const content = {
 export default function ContentPage() {
   return (
     <Doc
-      title={content.title}
-      description={content.description}
+      title={data.title}
+      description={data.description}
       path="/docs/content"
-      doc={content}
+      doc={data}
     >
       <h2 id="overview">Overview</h2>
       <p>
-        Route files can export a <code>content</code> object next to the page
-        component. Sitex reads those exports and exposes them through{" "}
-        <code>sitex:content</code>, so overview pages and layouts can build blog
+        Route files can export a <code>data</code> object next to the page
+        component. Sitex reads those exports and exposes flat page data through{" "}
+        <code>sitex:pages</code>, so overview pages and layouts can build blog
         indexes, cards, previous and next links, sidebars, and metadata from the
         routes themselves.
       </p>
@@ -36,9 +37,9 @@ export default function ContentPage() {
         <code>/docs/content</code>.
       </p>
 
-      <h2 id="content-export">content export</h2>
+      <h2 id="data-export">data export</h2>
       <p>
-        Add <code>export const content</code> to any route that should be
+        Add <code>export const data</code> to any route that should be
         discoverable. The route keeps owning the full page, while the exported
         object becomes reusable site data.
       </p>
@@ -52,7 +53,7 @@ export default function ContentPage() {
   tags: string[]
 }
 
-export const content = {
+export const data = {
   title: "Building content sites with React",
   description: "How route-owned content keeps pages local and reusable.",
   publishedAt: "2026-06-03",
@@ -63,8 +64,8 @@ export const content = {
 export default function PostPage() {
   return (
     <article>
-      <h1>{content.title}</h1>
-      <p>{content.description}</p>
+      <h1>{data.title}</h1>
+      <p>{data.description}</p>
       {/* full post content */}
     </article>
   )
@@ -76,15 +77,64 @@ export default function PostPage() {
         dates, descriptions, or tags.
       </p>
 
+      <h2 id="mdx-pages">MDX pages</h2>
+      <p>
+        Add <code>.mdx</code> files to <code>src/pages</code> for prose routes.
+        MDX pages require YAML frontmatter with a <code>layout</code> value.
+        Layout names resolve from <code>src/layouts</code>.
+      </p>
+      <CodeBlock
+        lang="text"
+        code={`---
+layout: blog/post
+title: Building content sites with React
+description: How route-owned content keeps pages local and reusable.
+---
+
+# Building content sites with React
+
+This body is rendered as React children inside the layout.`}
+      />
+      <CodeBlock
+        lang="tsx"
+        code={`// src/layouts/blog/post.tsx
+import type { MarkdownLayoutProps } from "@fulldotdev/sitex"
+
+type Props = MarkdownLayoutProps<{
+  title: string
+  description: string
+}>
+
+export default function BlogPostLayout({
+  title,
+  description,
+  children,
+}: Props) {
+  return (
+    <article>
+      <h1>{title}</h1>
+      <p>{description}</p>
+      {children}
+    </article>
+  )
+}`}
+      />
+      <p>
+        The <code>layout</code> field is used to pick the layout and remains
+        visible through <code>getPage</code> and <code>getPages</code>. It is
+        not passed to the layout component. Page data cannot define{" "}
+        <code>path</code> or <code>children</code>.
+      </p>
+
       <h2 id="get-pages">getPages</h2>
       <p>
-        Use <code>getPages</code> to read all content exports, or pass a
+        Use <code>getPages</code> to read all page data exports, or pass a
         slash-prefixed path prefix to scope the result. A blog overview usually
         reads only <code>/blog</code> pages, sorts them, and maps them to cards.
       </p>
       <CodeBlock
         lang="tsx"
-        code={`import { getPages } from "sitex:content"
+        code={`import { getPages } from "sitex:pages"
 
 const posts = await getPages("/blog")
 
@@ -95,14 +145,14 @@ export default function BlogPage() {
       <div>
         {posts
           .sort((a, b) => {
-            return b.content.publishedAt.localeCompare(a.content.publishedAt)
+            return b.publishedAt.localeCompare(a.publishedAt)
           })
           .map((post) => (
             <article key={post.path}>
-              <a href={post.path}>{post.content.title}</a>
-              <p>{post.content.description}</p>
-              <time dateTime={post.content.publishedAt}>
-                {post.content.publishedAt}
+              <a href={post.path}>{post.title}</a>
+              <p>{post.description}</p>
+              <time dateTime={post.publishedAt}>
+                {post.publishedAt}
               </time>
             </article>
           ))}
@@ -125,7 +175,7 @@ export default function BlogPage() {
       </p>
       <CodeBlock
         lang="tsx"
-        code={`import { getPage } from "sitex:content"
+        code={`import { getPage } from "sitex:pages"
 
 const post = await getPage("/blog/building-content-sites")
 
@@ -137,10 +187,10 @@ export default function FeaturedPost() {
   return (
     <aside>
       <p>Featured post</p>
-      <a href={post.path}>{post.content.title}</a>
-      <p>{post.content.description}</p>
-      <time dateTime={post.content.publishedAt}>
-        {post.content.publishedAt}
+      <a href={post.path}>{post.title}</a>
+      <p>{post.description}</p>
+      <time dateTime={post.publishedAt}>
+        {post.publishedAt}
       </time>
     </aside>
   )
@@ -153,8 +203,8 @@ export default function FeaturedPost() {
 
       <h2 id="typing">Typing</h2>
       <p>
-        Sitex generates types for <code>sitex:content</code> from the actual{" "}
-        <code>content</code> exports in <code>src/pages</code>. Editors can then
+        Sitex generates types for <code>sitex:pages</code> from the actual{" "}
+        <code>data</code> exports in <code>src/pages</code>. Editors can then
         infer fields like <code>title</code>, <code>description</code>,{" "}
         <code>publishedAt</code>, and <code>tags</code> when you call{" "}
         <code>getPages</code> or <code>getPage</code>.
@@ -162,21 +212,18 @@ export default function FeaturedPost() {
       <CodeBlock
         lang="ts"
         code={`type Page = {
-  file: string
   path: string
-  content: {
-    title: string
-    description: string
-    publishedAt?: string
-    author?: string
-    tags?: string[]
-  }
+  title: string
+  description: string
+  publishedAt?: string
+  author?: string
+  tags?: string[]
 }`}
       />
       <p>
         Generated types describe what exists in the project. If you want to
         enforce a consistent shape across all blog posts, give the{" "}
-        <code>content</code> export its own type. Prefer <code>satisfies</code>,
+        <code>data</code> export its own type. Prefer <code>satisfies</code>,
         because it checks the object while preserving the inferred values Sitex
         reads.
       </p>
@@ -190,7 +237,7 @@ export default function FeaturedPost() {
   tags: string[]
 }
 
-export const content = {
+export const data = {
   title: "Building content sites with React",
   description: "How route-owned content keeps pages local and reusable.",
   publishedAt: "2026-06-03",
@@ -206,8 +253,8 @@ export const content = {
       <h2 id="limits">Limits</h2>
       <p>
         Sitex executes page modules during content discovery and then reads the
-        exported <code>content</code> value. That means <code>content</code> can
-        use imported values, constants, and helper functions.
+        exported <code>data</code> value. That means <code>data</code> can use
+        imported values, constants, and helper functions.
       </p>
       <CodeBlock
         lang="ts"
@@ -217,7 +264,7 @@ function createTags() {
   return ["react", "content"]
 }
 
-export const content = {
+export const data = {
   title: "Building content sites with React",
   description: "How route-owned content keeps pages local and reusable.",
   publishedAt: "2026-06-03",
@@ -230,7 +277,7 @@ export const content = {
         be JSON-serializable. Use strings, numbers, booleans, arrays, plain
         objects, and <code>null</code>. Do not return JSX, functions, class
         instances, dates, maps, sets, or other non-JSON values from{" "}
-        <code>content</code>.
+        <code>data</code>.
       </p>
       <p>
         Because route modules run during discovery, top-level page code must be
@@ -239,8 +286,8 @@ export const content = {
       </p>
       <p>
         Keep JSX in the page component and keep shared metadata in{" "}
-        <code>content</code>. That split keeps route files local while still
-        giving the rest of the site typed content data.
+        <code>data</code>. That split keeps route files local while still giving
+        the rest of the site typed content data.
       </p>
     </Doc>
   )

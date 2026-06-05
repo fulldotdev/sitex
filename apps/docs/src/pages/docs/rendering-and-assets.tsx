@@ -1,7 +1,7 @@
 import Doc from "@/components/layouts/doc"
 import { CodeBlock } from "@/components/ui/code-block"
 
-export const content = {
+export const data = {
   title: "Rendering and assets",
   description:
     "How Sitex renders static and server routes, CSS, and island assets.",
@@ -18,10 +18,10 @@ export const content = {
 export default function RenderingAndAssetsPage() {
   return (
     <Doc
-      title={content.title}
-      description={content.description}
+      title={data.title}
+      description={data.description}
       path="/docs/rendering-and-assets"
-      doc={content}
+      doc={data}
     >
       <h2 id="overview">Overview</h2>
       <p>

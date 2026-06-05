@@ -1,7 +1,7 @@
 import Doc from "@/components/layouts/doc"
 import { CodeBlock } from "@/components/ui/code-block"
 
-export const content = {
+export const data = {
   title: "Folder structure",
   description:
     "What Sitex requires and how we recommend organizing content sites.",
@@ -22,10 +22,10 @@ export const content = {
 export default function FolderStructurePage() {
   return (
     <Doc
-      title={content.title}
-      description={content.description}
+      title={data.title}
+      description={data.description}
       path="/docs/folder-structure"
-      doc={content}
+      doc={data}
     >
       <CodeBlock
         lang="text"
@@ -47,7 +47,7 @@ export default function FolderStructurePage() {
     index.tsx
     docs/
       index.tsx
-      content.tsx
+      data.tsx
       island-rendering.tsx
       page-routing.tsx
       rendering-and-assets.tsx

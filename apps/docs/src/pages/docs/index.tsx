@@ -1,9 +1,9 @@
 import Doc from "@/components/layouts/doc"
 
-export const content = {
+export const data = {
   title: "Introduction",
   description:
-    "A simpler, Vite-based React framework for building fast websites with local content.",
+    "A simpler, Vite-based React framework for building fast websites with local data.",
   order: 1,
   tocItems: [
     { href: "#overview", label: "Overview" },
@@ -15,10 +15,10 @@ export const content = {
 export default function IntroductionPage() {
   return (
     <Doc
-      title={content.title}
-      description={content.description}
+      title={data.title}
+      description={data.description}
       path="/docs"
-      doc={content}
+      doc={data}
     >
       <h2 id="overview">Overview</h2>
       <p>

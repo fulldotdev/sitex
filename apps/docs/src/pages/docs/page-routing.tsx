@@ -1,6 +1,6 @@
 import Doc from "@/components/layouts/doc"
 
-export const content = {
+export const data = {
   title: "Page routing",
   description: "Map TSX files in the pages folder to static routes.",
   order: 3,
@@ -16,10 +16,10 @@ export const content = {
 export default function PageRoutingPage() {
   return (
     <Doc
-      title={content.title}
-      description={content.description}
+      title={data.title}
+      description={data.description}
       path="/docs/page-routing"
-      doc={content}
+      doc={data}
     >
       <h2 id="overview">Overview</h2>
       <p>

@@ -45,7 +45,7 @@ declare module "virtual:sitex-render" {
   ): Promise<Response | undefined>
 }
 
-declare module "sitex:content" {
+declare module "sitex:pages" {
   type JsonValue =
     | string
     | number
@@ -54,15 +54,13 @@ declare module "sitex:content" {
     | JsonValue[]
     | { [key: string]: JsonValue }
 
-  type ContentPage<TContent extends JsonValue = { [key: string]: JsonValue }> =
-    {
-      readonly file: string
-      readonly path: string
-      readonly content: TContent
-    }
+  type Page = {
+    readonly path: string
+    readonly [key: string]: JsonValue
+  }
 
-  export function getPages(prefix?: string): Promise<ContentPage[]>
-  export function getPage(path: string): Promise<ContentPage | undefined>
+  export function getPages(prefix?: string): Promise<Page[]>
+  export function getPage(path: string): Promise<Page | undefined>
 }
 
 declare namespace React {

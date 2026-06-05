@@ -31,6 +31,10 @@ export type PageLayout<Props = unknown> = (
   context: PageContext<Props>
 ) => ReactNode | Promise<ReactNode>
 
+export type MarkdownLayoutProps<TData extends object = object> = TData & {
+  children: ReactNode
+}
+
 export type Route<Props = unknown> = {
   file: string
   layout: PageLayout<Props>
@@ -205,8 +209,8 @@ function createRoute<Props>(route: Omit<Route<Props>, "score">): Route<Props> {
 function pageFileToRoutePattern(file: string) {
   const route = file
     .replace(/^src\/pages/, "")
-    .replace(/\/index\.tsx$/, "/")
-    .replace(/\.tsx$/, "")
+    .replace(/\/index\.(tsx|mdx)$/, "/")
+    .replace(/\.(tsx|mdx)$/, "")
 
   return normalizeRoutePath(route || "/")
 }

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 
-import { getPage } from "sitex:content"
+import { getPage } from "sitex:pages"
 
 import { Sidebar1 } from "@/components/blocks/sidebar-1"
 import "@/styles/globals.css"
@@ -33,8 +33,7 @@ export const docsNavigation: NavigationLink[] = docsPages
   .filter((page) => page !== undefined)
   .map((page) => ({
     href: page.path,
-    label:
-      typeof page.content.title === "string" ? page.content.title : page.path,
+    label: typeof page.title === "string" ? page.title : page.path,
   }))
 
 const site = {

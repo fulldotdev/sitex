@@ -31,6 +31,8 @@ import { fileURLToPath } from "node:url"
 
 import fg from "fast-glob"
 import { nitro } from "nitro/vite"
+import { mdxToJs } from "satteri"
+import { parse as parseYaml } from "yaml"
 
 import {
   collectHydrationEntries,
@@ -50,9 +52,10 @@ const virtualRoutesId = "virtual:sitex-routes"
 const resolvedVirtualRoutesId = `\0${virtualRoutesId}`
 const virtualRenderId = "virtual:sitex-render"
 const resolvedVirtualRenderId = `\0${virtualRenderId}`
-const virtualContentId = "sitex:content"
-const resolvedVirtualContentId = `\0${virtualContentId}`
-const contentTypesFile = ".sitex/content.d.ts"
+const virtualPagesId = "sitex:pages"
+const resolvedVirtualPagesId = `\0${virtualPagesId}`
+const pagesTypesFile = ".sitex/pages.d.ts"
+const mdxTypecheckDir = ".sitex/typecheck"
 
 type JsonValue =
   | string
@@ -62,13 +65,12 @@ type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue }
 
-type ContentPage = {
-  file: string
+type PageData = {
   path: string
-  content: JsonValue
+  [key: string]: JsonValue
 }
 
-type ContentRoute = {
+type PageDataRoute = {
   file: string
   path: string
 }
@@ -170,23 +172,25 @@ function sitexPlugin(options: Required<SitexOptions>): Plugin {
         const code = await readFile(absoluteFile, "utf8")
         collectHydrationEntries(code, absoluteFile, root, hydration)
       }
+
+      await writeMdxTypecheckFiles(root)
     },
 
     resolveId: {
       filter: {
-        id: /^(virtual:sitex-islands|virtual:sitex-routes|virtual:sitex-render|sitex:content)$/,
+        id: /^(virtual:sitex-islands|virtual:sitex-routes|virtual:sitex-render|sitex:pages)$/,
       },
       handler(id) {
         if (id === virtualHydrationId) return resolvedVirtualHydrationId
         if (id === virtualRoutesId) return resolvedVirtualRoutesId
         if (id === virtualRenderId) return resolvedVirtualRenderId
-        if (id === virtualContentId) return resolvedVirtualContentId
+        if (id === virtualPagesId) return resolvedVirtualPagesId
       },
     },
 
     load: {
       filter: {
-        id: /^(\0virtual:sitex-islands|\0virtual:sitex-routes|\0virtual:sitex-render|\0sitex:content)$/,
+        id: /^(\0virtual:sitex-islands|\0virtual:sitex-routes|\0virtual:sitex-render|\0sitex:pages)$/,
       },
       async handler(id) {
         if (id === resolvedVirtualHydrationId) {
@@ -203,18 +207,28 @@ function sitexPlugin(options: Required<SitexOptions>): Plugin {
           return createJavaScriptModule(createVirtualRenderCode(root))
         }
 
-        if (id === resolvedVirtualContentId) {
-          return createJavaScriptModule(createContentModuleCode(options))
+        if (id === resolvedVirtualPagesId) {
+          return createJavaScriptModule(createPagesModuleCode(options))
         }
       },
     },
 
     transform: {
       filter: {
-        id: /\.tsx$/,
-        code: "client:",
+        id: /\.(tsx|mdx)$/,
       },
-      handler(code, id) {
+      async handler(code, id) {
+        if (id.endsWith(".mdx")) {
+          return transformMdxPage(code, id, root)
+        }
+
+        if (hasContentExport(code)) {
+          const file = normalizePath(path.relative(root, id))
+          throw new Error(
+            `Page module "${file}" exports content. Use "export const data" instead.`
+          )
+        }
+
         if (!id.endsWith(".tsx") || !code.includes("client:")) return
 
         return transformClientDirectives(code, id, root, hydration)
@@ -317,6 +331,10 @@ function sitexPlugin(options: Required<SitexOptions>): Plugin {
           (file.includes("/src/pages/") || file.includes("/src/data/"))
         ) {
           await writeContentTypesFromServer(root, update.server, options)
+        }
+
+        if (file.includes("/src/pages/") && file.endsWith(".mdx")) {
+          await writeMdxTypecheckFiles(root)
         }
 
         this.environment.hot.send({ type: "full-reload" })
@@ -435,7 +453,7 @@ async function writeHtml(
 }
 
 async function collectRouteFiles(root: string) {
-  return fg("src/pages/**/*.tsx", {
+  return fg(["src/pages/**/*.tsx", "src/pages/**/*.mdx"], {
     cwd: root,
     ignore: ["src/pages/examples/**"],
     onlyFiles: true,
@@ -467,19 +485,36 @@ function collectServerRouteFilesSync(root: string) {
   })
 }
 
-async function collectContentRoutes(
+async function collectPageDataRoutes(
   root: string,
   options: Required<SitexOptions>
 ) {
   const files = await collectRouteFiles(root)
-  const routes: ContentRoute[] = []
+  const routes: PageDataRoute[] = []
 
   for (const file of files) {
     if (hasRouteParams(file)) continue
 
+    if (file.endsWith(".mdx")) {
+      routes.push({
+        file,
+        path: routePathToPublicPath(
+          staticPageFileToPath(file),
+          options.trailingSlash
+        ),
+      })
+      continue
+    }
+
     const code = await readFile(path.join(root, file), "utf8")
 
     if (hasContentExport(code)) {
+      throw new Error(
+        `Page module "${file}" exports content. Use "export const data" instead.`
+      )
+    }
+
+    if (hasDataExport(code)) {
       routes.push({
         file,
         path: routePathToPublicPath(
@@ -493,23 +528,25 @@ async function collectContentRoutes(
   return routes
 }
 
-async function collectContentPagesFromServer(
+async function collectPageDataFromServer(
   root: string,
   server: ViteDevServer,
   options: Required<SitexOptions>
 ) {
-  const routes = await collectContentRoutes(root, options)
-  const pages: ContentPage[] = []
+  const routes = await collectPageDataRoutes(root, options)
+  const pages: PageData[] = []
 
   for (const route of routes) {
     const module = (await importServerModule(server, `/${route.file}`)) as {
-      content?: unknown
+      data?: unknown
     }
 
-    if (module.content !== undefined) {
+    if (module.data !== undefined) {
+      const data = readJsonData(module.data, route.file)
+      validatePageData(data, route.file)
       pages.push({
-        ...route,
-        content: readJsonContent(module.content, route.file),
+        path: route.path,
+        ...data,
       })
     }
   }
@@ -522,11 +559,11 @@ async function writeContentTypesFromServer(
   server: ViteDevServer,
   options: Required<SitexOptions>
 ) {
-  const typesFile = path.join(root, contentTypesFile)
-  const pages = await collectContentPagesFromServer(root, server, options)
+  const typesFile = path.join(root, pagesTypesFile)
+  const pages = await collectPageDataFromServer(root, server, options)
 
   await mkdir(path.dirname(typesFile), { recursive: true })
-  await writeFileAtomic(typesFile, await createContentTypesCode(pages))
+  await writeFileAtomic(typesFile, await createPagesTypesCode(pages))
 }
 
 function formatContentTypeError(error: unknown) {
@@ -552,7 +589,7 @@ function invalidateVirtualModules(
   for (const id of [
     resolvedVirtualRoutesId,
     resolvedVirtualRenderId,
-    resolvedVirtualContentId,
+    resolvedVirtualPagesId,
   ]) {
     const module = moduleGraph.getModuleById(id)
 
@@ -581,10 +618,151 @@ async function writeFileAtomic(file: string, content: string) {
   await rename(temporaryFile, file)
 }
 
+async function transformMdxPage(code: string, id: string, root: string) {
+  const file = normalizePath(path.relative(root, id))
+  const result = mdxToJs(code, {
+    development: false,
+    jsxImportSource: "react",
+  })
+  const { data, layoutFile } = await readMdxPageMetadata(
+    root,
+    file,
+    result.frontmatter
+  )
+
+  const mdxCode = result.code.replace(
+    /export\s+default\s+MDXContent\s*;?\s*$/,
+    "const MarkdownContent = MDXContent;"
+  )
+
+  if (mdxCode === result.code) {
+    throw new Error(
+      `Satteri did not emit the expected MDX component for "${file}".`
+    )
+  }
+
+  return [
+    mdxCode,
+    `import Layout from ${JSON.stringify(`/${normalizePath(path.relative(root, layoutFile))}`)}`,
+    `export const data = ${JSON.stringify(data)}`,
+    `export default function MdxPage() {`,
+    `  const { layout: _layout, path: _path, children: _children, ...props } = data`,
+    `  return _jsx(Layout, Object.assign({}, props, { children: _jsx(MarkdownContent, {}) }))`,
+    `}`,
+  ].join("\n")
+}
+
+async function writeMdxTypecheckFiles(root: string) {
+  const typecheckRoot = path.join(root, mdxTypecheckDir)
+  const files = await fg("src/pages/**/*.mdx", {
+    cwd: root,
+    ignore: ["src/pages/examples/**"],
+    onlyFiles: true,
+  })
+
+  await rm(typecheckRoot, { recursive: true, force: true })
+
+  for (const file of files) {
+    const code = await readFile(path.join(root, file), "utf8")
+    const result = mdxToJs(code, {
+      development: false,
+      jsxImportSource: "react",
+    })
+    const { data, layoutFile } = await readMdxPageMetadata(
+      root,
+      file,
+      result.frontmatter
+    )
+    const typecheckFile = path.join(typecheckRoot, `${file}.tsx`)
+
+    await mkdir(path.dirname(typecheckFile), { recursive: true })
+    await writeFileAtomic(
+      typecheckFile,
+      createMdxTypecheckCode(typecheckFile, layoutFile, data)
+    )
+  }
+}
+
+async function readMdxPageMetadata(
+  root: string,
+  file: string,
+  frontmatter: { kind: string; value: string } | null | undefined
+) {
+  const data = parseMdxFrontmatter(frontmatter, file)
+  const layout = data.layout
+
+  if (hasRouteParams(file)) {
+    throw new Error(`Dynamic MDX page "${file}" is not supported.`)
+  }
+
+  if (typeof layout !== "string" || layout.trim() === "") {
+    throw new Error(
+      `MDX page "${file}" must define a string "layout" in frontmatter.`
+    )
+  }
+
+  if (
+    layout.startsWith(".") ||
+    layout.startsWith("/") ||
+    layout.includes("..") ||
+    !/^[A-Za-z0-9][A-Za-z0-9_/-]*$/.test(layout)
+  ) {
+    throw new Error(
+      `MDX page "${file}" has unsupported layout "${layout}". Use a name like "blog/post", not a relative path.`
+    )
+  }
+
+  validatePageData(data, file)
+
+  const layoutFile = normalizePath(
+    path.join(root, "src/layouts", `${layout}.tsx`)
+  )
+
+  try {
+    await access(layoutFile)
+  } catch {
+    throw new Error(
+      `MDX page "${file}" references missing layout "src/layouts/${layout}.tsx".`
+    )
+  }
+
+  return { data, layoutFile }
+}
+
+function createMdxTypecheckCode(
+  typecheckFile: string,
+  layoutFile: string,
+  data: { [key: string]: JsonValue }
+) {
+  const dataEntries = Object.keys(data)
+    .filter((key) => key !== "layout" && key !== "path" && key !== "children")
+    .map((key) => `  ${JSON.stringify(key)}: data[${JSON.stringify(key)}],`)
+
+  return [
+    `import type { ComponentProps } from "react"`,
+    `import Layout from ${JSON.stringify(createRelativeImport(typecheckFile, layoutFile))}`,
+    ``,
+    `const data = ${JSON.stringify(data, null, 2)} as const`,
+    `const { layout: _layout, path: _path, children: _children, ..._props } = data as typeof data & { path?: never; children?: never }`,
+    `const layoutProps = {`,
+    ...dataEntries,
+    `} satisfies Omit<ComponentProps<typeof Layout>, "children">`,
+    ``,
+    `export const typecheck = <Layout {...layoutProps}>{null}</Layout>`,
+    ``,
+  ].join("\n")
+}
+
+function createRelativeImport(fromFile: string, toFile: string) {
+  const specifier = normalizePath(path.relative(path.dirname(fromFile), toFile))
+
+  return specifier.startsWith(".") ? specifier : `./${specifier}`
+}
+
 function createVirtualRoutesCode() {
   return [
     `import { readPageRoutes, sortRoutes, validateUniqueRoutePaths } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
-    `const routeModules = import.meta.glob("/src/pages/**/*.tsx")`,
+    `const routeModules = import.meta.glob(["/src/pages/**/*.tsx", "/src/pages/**/*.mdx"])`,
     `function isRouteFile(file) {`,
     `  return !file.includes("/src/pages/examples/")`,
     `}`,
@@ -601,17 +779,17 @@ function createVirtualRoutesCode() {
   ].join("\n")
 }
 
-function createContentModuleCode(options: Required<SitexOptions>) {
+function createPagesModuleCode(options: Required<SitexOptions>) {
   const trailingSlash = JSON.stringify(options.trailingSlash)
 
   return [
-    `const contentModules = import.meta.glob("/src/pages/**/*.tsx", { import: "content" })`,
+    `const pageDataModules = import.meta.glob(["/src/pages/**/*.tsx", "/src/pages/**/*.mdx"], { import: "data" })`,
     `function normalizeRoutePath(path) {`,
     `  if (!path || path === "/") return "/"`,
     `  return "/" + path.replace(/^\\/+|\\/+$/g, "")`,
     `}`,
     `function staticPageFileToPath(file) {`,
-    `  const route = file.replace(/^src\\/pages/, "").replace(/\\/index\\.tsx$/, "/").replace(/\\.tsx$/, "")`,
+    `  const route = file.replace(/^src\\/pages/, "").replace(/\\/index\\.(tsx|mdx)$/, "/").replace(/\\.(tsx|mdx)$/, "")`,
     `  return normalizeRoutePath(route || "/")`,
     `}`,
     `function routePathToPublicPath(path) {`,
@@ -621,18 +799,25 @@ function createContentModuleCode(options: Required<SitexOptions>) {
     `function isRouteFile(file) {`,
     `  return !file.includes("/src/pages/examples/") && !/\\[[^\\]]+\\]/.test(file)`,
     `}`,
-    `const routeMeta = Object.keys(contentModules)`,
+    `function validateData(data, file) {`,
+    `  if (data && typeof data === "object") {`,
+    `    if (Object.hasOwn(data, "path")) throw new Error(\`Page data in "\${file}" cannot define reserved key "path".\`)`,
+    `    if (Object.hasOwn(data, "children")) throw new Error(\`Page data in "\${file}" cannot define reserved key "children".\`)`,
+    `  }`,
+    `}`,
+    `const routeMeta = Object.keys(pageDataModules)`,
     `  .filter(isRouteFile)`,
     `  .map((file) => {`,
     `    const routeFile = file.replace(/^\\/+/, "")`,
     `    return { file: routeFile, path: routePathToPublicPath(staticPageFileToPath(routeFile)) }`,
     `  })`,
     `async function toPage(route) {`,
-    `  const load = contentModules["/" + route.file]`,
+    `  const load = pageDataModules["/" + route.file]`,
     `  if (!load) return undefined`,
-    `  const content = await load()`,
-    `  if (content === undefined) return undefined`,
-    `  return { file: route.file, path: route.path, content }`,
+    `  const data = await load()`,
+    `  if (data === undefined) return undefined`,
+    `  validateData(data, route.file)`,
+    `  return { path: route.path, ...data }`,
     `}`,
     `export async function getPages(prefix) {`,
     `  const publicPrefix = prefix === undefined ? undefined : routePathToPublicPath(normalizeRoutePath(prefix))`,
@@ -648,7 +833,7 @@ function createContentModuleCode(options: Required<SitexOptions>) {
   ].join("\n")
 }
 
-async function createContentTypesCode(pages: ContentPage[]) {
+async function createPagesTypesCode(pages: PageData[]) {
   const { InputData, jsonInputForTargetLanguage, quicktype } =
     await import("quicktype-core")
   const jsonInput = jsonInputForTargetLanguage("typescript")
@@ -658,7 +843,7 @@ async function createContentTypesCode(pages: ContentPage[]) {
     samples:
       pages.length > 0
         ? pages.map((page) => JSON.stringify(page))
-        : [JSON.stringify({ file: "", path: "", content: {} })],
+        : [JSON.stringify({ path: "" })],
   })
 
   const inputData = new InputData()
@@ -688,7 +873,7 @@ async function createContentTypesCode(pages: ContentPage[]) {
     .join("\n")
 
   return [
-    `declare module "sitex:content" {`,
+    `declare module "sitex:pages" {`,
     types,
     `  type Pages = Page[]`,
     `  export function getPages(prefix?: string): Promise<Pages>`,
@@ -709,7 +894,7 @@ function createVirtualRenderCode(root: string) {
     `import { getRoutes } from ${JSON.stringify(virtualRoutesId)}`,
     `import { createPageContext, matchRoute, readPageRoutes } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
     `export { getRoutes }`,
-    `const serverRouteModules = import.meta.glob("/src/pages/**/*.tsx")`,
+    `const serverRouteModules = import.meta.glob(["/src/pages/**/*.tsx", "/src/pages/**/*.mdx"])`,
     `const serverRouteFiles = ${JSON.stringify(serverRouteFiles)}`,
     `function isRouteFile(file) {`,
     `  return !file.includes("/src/pages/examples/")`,
@@ -719,7 +904,7 @@ function createVirtualRenderCode(root: string) {
     `  return "/" + path.replace(/^\\/+|\\/+$/g, "")`,
     `}`,
     `function routeFileToPattern(file) {`,
-    `  const route = file.replace(/^\\/+/, "").replace(/^src\\/pages/, "").replace(/\\/index\\.tsx$/, "/").replace(/\\.tsx$/, "")`,
+    `  const route = file.replace(/^\\/+/, "").replace(/^src\\/pages/, "").replace(/\\/index\\.(tsx|mdx)$/, "/").replace(/\\.(tsx|mdx)$/, "")`,
     `  return normalizeRoutePath(route || "/")`,
     `}`,
     `function routeScore(path) {`,
@@ -866,8 +1051,8 @@ function routePathToHtmlFile(
 function staticPageFileToPath(file: string) {
   const route = file
     .replace(/^src\/pages/, "")
-    .replace(/\/index\.tsx$/, "/")
-    .replace(/\.tsx$/, "")
+    .replace(/\/index\.(tsx|mdx)$/, "/")
+    .replace(/\.(tsx|mdx)$/, "")
 
   return normalizeRoutePath(route || "/")
 }
@@ -880,8 +1065,52 @@ function hasContentExport(code: string) {
   return /\bexport\s+const\s+content\b/.test(code)
 }
 
-function readJsonContent(value: unknown, file: string): JsonValue {
-  return readJsonValue(value, file, "content", new WeakSet<object>())
+function hasDataExport(code: string) {
+  return /\bexport\s+const\s+data\b/.test(code)
+}
+
+function readJsonData(
+  value: unknown,
+  file: string
+): { [key: string]: JsonValue } {
+  const data = readJsonValue(value, file, "data", new WeakSet<object>())
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error(`Data export in "${file}" must be a JSON object.`)
+  }
+
+  return data
+}
+
+function parseMdxFrontmatter(
+  frontmatter: { kind: string; value: string } | null | undefined,
+  file: string
+) {
+  if (!frontmatter) {
+    throw new Error(`MDX page "${file}" must define frontmatter.`)
+  }
+
+  if (frontmatter.kind !== "yaml") {
+    throw new Error(`MDX page "${file}" must use YAML frontmatter.`)
+  }
+
+  const value = parseYaml(frontmatter.value)
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`Frontmatter in "${file}" must be an object.`)
+  }
+
+  return readJsonData(value, file)
+}
+
+function validatePageData(data: { [key: string]: JsonValue }, file: string) {
+  for (const key of ["path", "children"]) {
+    if (Object.hasOwn(data, key)) {
+      throw new Error(
+        `Page data in "${file}" cannot define reserved key "${key}".`
+      )
+    }
+  }
 }
 
 function readJsonValue(
@@ -901,7 +1130,7 @@ function readJsonValue(
 
   if (Array.isArray(value)) {
     if (seen.has(value)) {
-      throw new Error(`Content export in "${file}" contains a circular value.`)
+      throw new Error(`Data in "${file}" contains a circular value.`)
     }
 
     seen.add(value)
@@ -917,7 +1146,7 @@ function readJsonValue(
 
   if (typeof value === "object" && value !== null) {
     if (seen.has(value)) {
-      throw new Error(`Content export in "${file}" contains a circular value.`)
+      throw new Error(`Data in "${file}" contains a circular value.`)
     }
 
     seen.add(value)
@@ -934,7 +1163,7 @@ function readJsonValue(
   }
 
   throw new Error(
-    `Content export in "${file}" must be JSON-serializable. Unsupported value at ${keyPath}.`
+    `Data in "${file}" must be JSON-serializable. Unsupported value at ${keyPath}.`
   )
 }
 

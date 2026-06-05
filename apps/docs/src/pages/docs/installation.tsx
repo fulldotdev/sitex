@@ -2,7 +2,7 @@ import Doc from "@/components/layouts/doc"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { CodeBlock } from "@/components/ui/code-block"
 
-export const content = {
+export const data = {
   title: "Installation",
   description: "Install SiteX and add the Vite and TypeScript configuration.",
   order: 2,
@@ -20,10 +20,10 @@ export const content = {
 export default function InstallationPage() {
   return (
     <Doc
-      title={content.title}
-      description={content.description}
+      title={data.title}
+      description={data.description}
       path="/docs/installation"
-      doc={content}
+      doc={data}
     >
       <Alert className="border-primary/25 bg-primary/10 py-4 shadow-sm">
         <AlertTitle>Installing with an AI agent?</AlertTitle>
