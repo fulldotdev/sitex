@@ -4,6 +4,7 @@
     "src/pages/**/*",
     "src/components/blocks/**/*",
     "src/components/layouts/**/*",
+    "src/components/mdx-components/**/*",
     "src/components/ui/**/*",
     "src/layouts/**/*",
     "src/components/theme-provider.tsx",

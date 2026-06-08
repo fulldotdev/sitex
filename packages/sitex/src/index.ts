@@ -1,5 +1,6 @@
 export type {
   JsonValue,
+  MarkdownHeading,
   MarkdownLayoutProps,
   PageContext,
   Route,

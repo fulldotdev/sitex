@@ -1,7 +1,10 @@
 import { createHighlighterCore } from "@shikijs/core"
 import { createJavaScriptRegexEngine } from "@shikijs/engine-javascript"
 import bash from "@shikijs/langs/bash"
+import html from "@shikijs/langs/html"
 import json from "@shikijs/langs/json"
+import markdown from "@shikijs/langs/markdown"
+import mdx from "@shikijs/langs/mdx"
 import ts from "@shikijs/langs/ts"
 import tsx from "@shikijs/langs/tsx"
 import githubDark from "@shikijs/themes/github-dark"
@@ -9,15 +12,22 @@ import githubLight from "@shikijs/themes/github-light"
 
 import { CodeBlockCopyButton } from "@/components/ui/code-block-copy-button"
 
-const highlighter = await createHighlighterCore({
-  langs: [bash, json, ts, tsx],
-  themes: [githubLight, githubDark],
-  engine: createJavaScriptRegexEngine(),
-})
+type CodeBlockHighlighter = Awaited<ReturnType<typeof createHighlighterCore>>
+
+const highlighterStore = globalThis as typeof globalThis & {
+  __sitexDocsHighlighter?: Promise<CodeBlockHighlighter>
+}
+
+const highlighter = await (highlighterStore.__sitexDocsHighlighter ??=
+  createHighlighterCore({
+    langs: [bash, html, json, markdown, mdx, ts, tsx],
+    themes: [githubLight, githubDark],
+    engine: createJavaScriptRegexEngine(),
+  }))
 
 type CodeBlockProps = {
   code: string
-  lang: "bash" | "json" | "text" | "ts" | "tsx"
+  lang: "bash" | "html" | "json" | "markdown" | "mdx" | "text" | "ts" | "tsx"
 }
 
 function escapeHtml(value: string) {
@@ -48,7 +58,7 @@ function CodeBlock({ code, lang }: CodeBlockProps) {
 
   return (
     <figure className="docs-code-block">
-      <CodeBlockCopyButton code={trimmedCode} client:visible />
+      <CodeBlockCopyButton code={trimmedCode} client:load />
       <div
         className="docs-code-block-content"
         dangerouslySetInnerHTML={{ __html: html }}

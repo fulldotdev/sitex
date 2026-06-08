@@ -3,79 +3,35 @@ layout: "doc"
 title: "Page routing"
 description: "Map TSX and MDX files in the pages folder to routes."
 order: 3
-tocItems:
-  - href: "#overview"
-    label: "Overview"
-  - href: "#route-files"
-    label: "Route files"
-  - href: "#index-routes"
-    label: "Index routes"
-  - href: "#dynamic-routes"
-    label: "Dynamic routes"
-  - href: "#server-routes"
-    label: "Server routes"
 ---
 
-<h2 id="overview">Overview</h2>
-<p>
-  Sitex uses file-based routing. TSX and MDX files in <code>src/pages</code>{" "}
-  become routes. This is the required part of the folder structure explained in{" "}
-  <a href="/docs/folder-structure">Folder structure</a>.
-</p>
-<p>
-  Routes are static unless they export <code>render = "server"</code>. See{" "}
-  <a href="/docs/rendering-and-assets">Rendering and assets</a> for how static
-  and server routes are rendered.
-</p>
+## Overview
 
-<h2 id="route-files">Route files</h2>
-<p>
-  A TSX route exports the page component for one URL. An MDX route uses
-  frontmatter to choose a layout and renders its body as that layout's children.
-</p>
-<ol>
-  <li>
-    <code>src/pages/about.tsx</code> becomes <code>/about</code>.
-  </li>
-  <li>
-    <code>src/pages/docs/page-routing.mdx</code> becomes{" "}
-    <code>/docs/page-routing</code>.
-  </li>
-</ol>
+Sitex uses file-based routing. TSX and MDX files in `src/pages` become routes. This is the required part of the folder structure explained in [Folder structure](/docs/folder-structure).
 
-<h2 id="index-routes">Index routes</h2>
-<p>
-  An <code>index.tsx</code> or <code>index.mdx</code> file maps to its parent
-  folder. This keeps root pages and section landing pages explicit.
-</p>
-<ol>
-  <li>
-    <code>src/pages/index.tsx</code> becomes <code>/</code>.
-  </li>
-  <li>
-    <code>src/pages/docs/index.mdx</code> becomes <code>/docs</code>.
-  </li>
-</ol>
+Routes are static unless they export `render = "server"`. See [Rendering and assets](/docs/rendering-and-assets) for how static and server routes are rendered.
 
-<h2 id="dynamic-routes">Dynamic routes</h2>
-<p>
-  A route segment wrapped in brackets becomes a route parameter. Static dynamic
-  routes must export <code>paths</code>, so Sitex knows which HTML files to
-  build.
-</p>
-<ol>
-  <li>
-    <code>src/pages/blog/[slug].tsx</code> can become{" "}
-    <code>/blog/hello-world</code>.
-  </li>
-  <li>
-    Each entry in <code>paths</code> provides the params for one generated page.
-  </li>
-</ol>
+## Route files
 
-<h2 id="server-routes">Server routes</h2>
-<p>
-  Export <code>render = "server"</code> for request-time routes. Server routes
-  can read the incoming <code>request</code> from page context and are not
-  written as static HTML files.
-</p>
+A TSX route exports the page component for one URL. An MDX route uses frontmatter to choose a layout and renders its body as that layout's children.
+
+1. `src/pages/about.tsx` becomes `/about`.
+2. `src/pages/docs/page-routing.mdx` becomes `/docs/page-routing`.
+
+## Index routes
+
+An `index.tsx` or `index.mdx` file maps to its parent folder. This keeps root pages and section landing pages explicit.
+
+1. `src/pages/index.tsx` becomes `/`.
+2. `src/pages/docs/index.mdx` becomes `/docs`.
+
+## Dynamic routes
+
+A route segment wrapped in brackets becomes a route parameter. Static dynamic routes must export `paths`, so Sitex knows which HTML files to build.
+
+1. `src/pages/blog/[slug].tsx` can become `/blog/hello-world`.
+2. Each entry in `paths` provides the params for one generated page.
+
+## Server routes
+
+Export `render = "server"` for request-time routes. Server routes can read the incoming `request` from page context and are not written as static HTML files.

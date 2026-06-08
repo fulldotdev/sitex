@@ -3,53 +3,25 @@ layout: "doc"
 title: "Pages API"
 description: "Share route metadata with typed getPages and getPage helpers."
 order: 4
-tocItems:
-  - href: "#overview"
-    label: "Overview"
-  - href: "#data-export"
-    label: "data export"
-  - href: "#mdx-pages"
-    label: "MDX pages"
-  - href: "#get-pages"
-    label: "getPages"
-  - href: "#get-page"
-    label: "getPage"
-  - href: "#typing"
-    label: "Typing"
-  - href: "#limits"
-    label: "Limits"
 ---
 
-import { CodeBlock } from "@/components/ui/code-block"
+## Overview
 
-      <h2 id="overview">Overview</h2>
-      <p>
-        Route files can export a <code>data</code> object next to the page
-        component. Sitex reads those exports and exposes flat page data through{" "}
-        <code>sitex:pages</code>, so overview pages and layouts can build blog
-        indexes, cards, previous and next links, sidebars, and metadata from the
-        routes themselves.
-      </p>
-      <p>
-        Paths use the same slash-prefixed shape as browser routes, such as{" "}
-        <code>/docs/content</code>.
-      </p>
+Route files can export a `data` object next to the page component. Sitex reads those exports and exposes flat page data through `sitex:pages`, so overview pages and layouts can build blog indexes, cards, previous and next links, sidebars, and metadata from the routes themselves.
 
-      <h2 id="data-export">data export</h2>
-      <p>
-        Add <code>export const data</code> to any route that should be
-        discoverable. The route keeps owning the full page, while the exported
-        object becomes reusable site data.
-      </p>
-      <CodeBlock
-        lang="tsx"
-        code={`type PostContent = {
+Paths use the same slash-prefixed shape as browser routes, such as `/docs/content`.
 
-title: string
-description: string
-publishedAt: string
-author: string
-tags: string[]
+## data export
+
+Add `export const data` to any route that should be discoverable. The route keeps owning the full page, while the exported object becomes reusable site data.
+
+```tsx
+type PostContent = {
+  title: string
+  description: string
+  publishedAt: string
+  author: string
+  tags: string[]
 }
 
 export const data = {
@@ -68,42 +40,34 @@ export default function PostPage() {
       {/* full post content */}
     </article>
   )
-}`}
-      />
-      <p>
-        This is useful for blog posts because the post page can stay as TSX,
-        while the blog overview can still list posts without duplicating titles,
-        dates, descriptions, or tags.
-      </p>
+}
+```
 
-      <h2 id="mdx-pages">MDX pages</h2>
-      <p>
-        Add <code>.mdx</code> files to <code>src/pages</code> for prose routes.
-        MDX pages require YAML frontmatter with a <code>layout</code> value.
-        Layout names resolve from <code>src/layouts</code>.
-      </p>
-      <CodeBlock
-        lang="text"
-        code={`---
+This is useful for blog posts because the post page can stay as TSX, while the blog overview can still list posts without duplicating titles, dates, descriptions, or tags.
 
+## MDX pages
+
+Add `.mdx` files to `src/pages` for prose routes. MDX pages require YAML frontmatter with a `layout` value. Layout names resolve from `src/layouts`.
+
+```mdx
+---
 layout: blog/post
 title: Building content sites with React
 description: How route-owned content keeps pages local and reusable.
-
 ---
 
 # Building content sites with React
 
-This body is rendered as React children inside the layout.`}
-      />
-      <CodeBlock
-        lang="tsx"
-        code={`// src/layouts/blog/post.tsx
+This body is rendered as React children inside the layout.
+```
+
+```tsx
+// src/layouts/blog/post.tsx
 import type { MarkdownLayoutProps } from "@fulldotdev/sitex"
 
 type Props = MarkdownLayoutProps<{
-title: string
-description: string
+  title: string
+  description: string
 }>
 
 export default function BlogPostLayout({
@@ -118,30 +82,19 @@ export default function BlogPostLayout({
       {children}
     </article>
   )
-}`}
-      />
-      <p>
-        The <code>layout</code> field is used to pick the layout and remains
-        visible through <code>getPage</code> and <code>getPages</code>. It is
-        not passed to the layout component. Page data cannot define{" "}
-        <code>path</code> or <code>children</code>.
-      </p>
-      <p>
-        During builds, Sitex also writes generated TSX mirrors for MDX pages
-        under <code>.sitex/typecheck</code>. Those files import the selected
-        layout and spread the frontmatter into it, so <code>tsc</code> reports
-        the same prop errors you would get from a hand-written TSX route.
-      </p>
+}
+```
 
-      <h2 id="get-pages">getPages</h2>
-      <p>
-        Use <code>getPages</code> to read all page data exports, or pass a
-        slash-prefixed path prefix to scope the result. A blog overview usually
-        reads only <code>/blog</code> pages, sorts them, and maps them to cards.
-      </p>
-      <CodeBlock
-        lang="tsx"
-        code={`import { getPages } from "sitex:pages"
+The `layout` field is used to pick the layout and remains visible through `getPage` and `getPages`. It is not passed to the layout component. Page data cannot define `path` or `children`.
+
+During builds, Sitex also writes generated TSX mirrors for MDX pages under `.sitex/typecheck`. Those files import the selected layout and spread the frontmatter into it, so `tsc` reports the same prop errors you would get from a hand-written TSX route.
+
+## getPages
+
+Use `getPages` to read all page data exports, or pass a slash-prefixed path prefix to scope the result. A blog overview usually reads only `/blog` pages, sorts them, and maps them to cards.
+
+```tsx
+import { getPages } from "sitex:pages"
 
 const posts = await getPages("/blog")
 
@@ -158,31 +111,23 @@ export default function BlogPage() {
             <article key={post.path}>
               <a href={post.path}>{post.title}</a>
               <p>{post.description}</p>
-              <time dateTime={post.publishedAt}>
-                {post.publishedAt}
-              </time>
+              <time dateTime={post.publishedAt}>{post.publishedAt}</time>
             </article>
           ))}
       </div>
     </main>
   )
-}`}
-      />
-      <p>
-        <code>getPages("/blog")</code> returns pages whose paths start with{" "}
-        <code>/blog</code>. Use <code>page.path</code> directly in links; it
-        follows the configured trailing-slash style. The return value is async,
-        matching the shape of content APIs like Astro&apos;s{" "}
-        <code>getCollection</code>.
-      </p>
+}
+```
 
-      <h2 id="get-page">getPage</h2>
-      <p>
-        Use <code>getPage</code> when you know the exact route path.
-      </p>
-      <CodeBlock
-        lang="tsx"
-        code={`import { getPage } from "sitex:pages"
+`getPages("/blog")` returns pages whose paths start with `/blog`. Use `page.path` directly in links; it follows the configured trailing-slash style. The return value is async, matching the shape of content APIs like Astro's `getCollection`.
+
+## getPage
+
+Use `getPage` when you know the exact route path.
+
+```tsx
+import { getPage } from "sitex:pages"
 
 const post = await getPage("/blog/building-content-sites")
 
@@ -191,56 +136,43 @@ export default function FeaturedPost() {
     return null
   }
 
-return (
+  return (
+    <aside>
+      <p>Featured post</p>
+      <a href={post.path}>{post.title}</a>
+      <p>{post.description}</p>
+      <time dateTime={post.publishedAt}>{post.publishedAt}</time>
+    </aside>
+  )
+}
+```
 
-<aside>
-<p>Featured post</p>
-<a href={post.path}>{post.title}</a>
-<p>{post.description}</p>
-<time dateTime={post.publishedAt}>
-{post.publishedAt}
-</time>
-</aside>
-)
-}`}
-/>
-<p>
-The return value is <code>Page | undefined</code>, so missing paths are
-explicit.
-</p>
+The return value is `Page | undefined`, so missing paths are explicit.
 
-      <h2 id="typing">Typing</h2>
-      <p>
-        Sitex has two TypeScript surfaces for page data. Generated module types
-        describe what <code>getPages</code> and <code>getPage</code> return.
-        Generated MDX mirrors check frontmatter against the selected layout
-        component props.
-      </p>
-      <CodeBlock
-        lang="ts"
-        code={`type Page = {
+## Typing
 
-path: string
-title: string
-description: string
-publishedAt?: string
-author?: string
-tags?: string[]
-}`}
-      />
-      <p>
-        In TSX routes, use <code>satisfies</code> when you want to enforce a
-        consistent shape for an exported <code>data</code> object while
-        preserving the inferred values Sitex reads.
-      </p>
-      <CodeBlock
-        lang="ts"
-        code={`type PostContent = {
-title: string
-description: string
-publishedAt: string
-author: string
-tags: string[]
+Sitex has two TypeScript surfaces for page data. Generated module types describe what `getPages` and `getPage` return. Generated MDX mirrors check frontmatter against the selected layout component props.
+
+```ts
+type Page = {
+  path: string
+  title: string
+  description: string
+  publishedAt?: string
+  author?: string
+  tags?: string[]
+}
+```
+
+In TSX routes, use `satisfies` when you want to enforce a consistent shape for an exported `data` object while preserving the inferred values Sitex reads.
+
+```ts
+type PostContent = {
+  title: string
+  description: string
+  publishedAt: string
+  author: string
+  tags: string[]
 }
 
 export const data = {
@@ -249,26 +181,20 @@ export const data = {
   publishedAt: "2026-06-03",
   author: "Sil",
   tags: ["react", "content"],
-} satisfies PostContent`}
-      />
-      <p>
-        In MDX routes, put that authoring contract on the layout props instead.
-        The frontmatter is checked by passing it to the actual layout component
-        in the generated typecheck mirror.
-      </p>
+} satisfies PostContent
+```
 
-      <h2 id="limits">Limits</h2>
-      <p>
-        Sitex executes page modules during content discovery and then reads the
-        exported <code>data</code> value. That means <code>data</code> can use
-        imported values, constants, and helper functions.
-      </p>
-      <CodeBlock
-        lang="ts"
-        code={`import { defaultAuthor } from "@/data/authors"
+In MDX routes, put that authoring contract on the layout props instead. The frontmatter is checked by passing it to the actual layout component in the generated typecheck mirror.
+
+## Limits
+
+Sitex executes page modules during content discovery and then reads the exported `data` value. That means `data` can use imported values, constants, and helper functions.
+
+```ts
+import { defaultAuthor } from "@/data/authors"
 
 function createTags() {
-return ["react", "content"]
+  return ["react", "content"]
 }
 
 export const data = {
@@ -277,22 +203,11 @@ export const data = {
   publishedAt: "2026-06-03",
   author: defaultAuthor.name,
   tags: createTags(),
-} satisfies PostContent`}
-      />
-      <p>
-        After those imports and helpers have run, the final exported value must
-        be JSON-serializable. Use strings, numbers, booleans, arrays, plain
-        objects, and <code>null</code>. Do not return JSX, functions, class
-        instances, dates, maps, sets, or other non-JSON values from{" "}
-        <code>data</code>.
-      </p>
-      <p>
-        Because route modules run during discovery, top-level page code must be
-        build-safe. Avoid browser-only globals like <code>window</code>, network
-        side effects, and code that depends on request-time state.
-      </p>
-      <p>
-        Keep JSX in the page component and keep shared metadata in{" "}
-        <code>data</code>. That split keeps route files local while still giving
-        the rest of the site typed content data.
-      </p>
+} satisfies PostContent
+```
+
+After those imports and helpers have run, the final exported value must be JSON-serializable. Use strings, numbers, booleans, arrays, plain objects, and `null`. Do not return JSX, functions, class instances, dates, maps, sets, or other non-JSON values from `data`.
+
+Because route modules run during discovery, top-level page code must be build-safe. Avoid browser-only globals like `window`, network side effects, and code that depends on request-time state.
+
+Keep JSX in the page component and keep shared metadata in `data`. That split keeps route files local while still giving the rest of the site typed content data.

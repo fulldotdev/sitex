@@ -23,13 +23,14 @@ function findPathByTitle(title: string) {
 export default function DocMdxLayout({
   title,
   description,
+  headings,
   tocItems,
   children,
 }: MarkdownLayoutProps<DocFrontmatter>) {
   const doc = {
     title,
     description,
-    tocItems: tocItems ? [...tocItems] : undefined,
+    tocItems: tocItems ? [...tocItems] : headings ? [...headings] : undefined,
   }
 
   return (

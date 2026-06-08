@@ -1,7 +1,6 @@
 import { createElement } from "react"
 
-import { flushSync } from "react-dom"
-import { createRoot, hydrateRoot } from "react-dom/client"
+import * as ReactDomClient from "react-dom/client"
 import { islands } from "virtual:sitex-islands"
 
 import {
@@ -15,6 +14,15 @@ type IdleWindow = Window &
   typeof globalThis & {
     requestIdleCallback?: (callback: IdleRequestCallback) => number
   }
+
+const reactDomClient =
+  (
+    ReactDomClient as typeof ReactDomClient & {
+      default?: typeof ReactDomClient
+    }
+  ).default ?? ReactDomClient
+
+const scheduledEntries = new WeakSet<HTMLElement>()
 
 async function bootHydrationEntry(element: HTMLElement) {
   const id = element.getAttribute(hydrationAttributes.island)
@@ -49,18 +57,25 @@ async function bootHydrationEntry(element: HTMLElement) {
     : undefined
 
   if (mode === "only") {
-    flushSync(() => {
-      createRoot(element).render(
-        createElement(Component, props, staticChildren)
-      )
-    })
+    reactDomClient
+      .createRoot(element)
+      .render(createElement(Component, props, staticChildren))
+    queueNestedHydrationScan(element)
     return
   }
 
-  hydrateRoot(element, createElement(Component, props, staticChildren))
+  reactDomClient.hydrateRoot(
+    element,
+    createElement(Component, props, staticChildren)
+  )
+  queueNestedHydrationScan(element)
 }
 
 function scheduleHydrationEntry(element: HTMLElement, mode: HydrationMode) {
+  if (scheduledEntries.has(element)) return
+
+  scheduledEntries.add(element)
+
   if (mode === "visible") {
     if (!("IntersectionObserver" in window)) {
       void bootHydrationEntry(element)
@@ -116,12 +131,44 @@ function scheduleHydrationEntry(element: HTMLElement, mode: HydrationMode) {
   void bootHydrationEntry(element)
 }
 
-for (const element of document.querySelectorAll<HTMLElement>(
-  `[${hydrationAttributes.island}]`
-)) {
-  const mode = element.getAttribute(hydrationAttributes.mode)
+function queueNestedHydrationScan(element: HTMLElement) {
+  window.setTimeout(() => scheduleHydrationEntries(element), 0)
+}
 
-  if (isHydrationMode(mode)) {
-    scheduleHydrationEntry(element, mode)
+function scheduleHydrationEntries(root: ParentNode) {
+  if (
+    root instanceof HTMLElement &&
+    root.hasAttribute(hydrationAttributes.island)
+  ) {
+    const mode = root.getAttribute(hydrationAttributes.mode)
+
+    if (isHydrationMode(mode)) {
+      scheduleHydrationEntry(root, mode)
+    }
+  }
+
+  for (const element of root.querySelectorAll<HTMLElement>(
+    `[${hydrationAttributes.island}]`
+  )) {
+    const mode = element.getAttribute(hydrationAttributes.mode)
+
+    if (isHydrationMode(mode)) {
+      scheduleHydrationEntry(element, mode)
+    }
   }
 }
+
+scheduleHydrationEntries(document)
+
+new MutationObserver((records) => {
+  for (const record of records) {
+    for (const node of record.addedNodes) {
+      if (node instanceof HTMLElement) {
+        scheduleHydrationEntries(node)
+      }
+    }
+  }
+}).observe(document.documentElement, {
+  childList: true,
+  subtree: true,
+})

@@ -31,7 +31,7 @@ import { fileURLToPath } from "node:url"
 
 import fg from "fast-glob"
 import { nitro } from "nitro/vite"
-import { mdxToJs } from "satteri"
+import { defineHastPlugin, mdxToJs } from "satteri"
 import { parse as parseYaml } from "yaml"
 
 import {
@@ -76,8 +76,25 @@ type PageDataRoute = {
   path: string
 }
 
+type MarkdownHeading = {
+  depth: number
+  href: string
+  id: string
+  label: string
+}
+
 export type SitexOptions = {
+  mdx?: {
+    components?: Record<string, string>
+  }
   trailingSlash?: boolean
+}
+
+type ResolvedSitexOptions = {
+  mdx: {
+    components: Record<string, string>
+  }
+  trailingSlash: boolean
 }
 
 const isHtmlRequest = (req: Connect.IncomingMessage) => {
@@ -93,7 +110,10 @@ function shouldGenerateContentTypes() {
 }
 
 export function sitex(options: SitexOptions = {}): PluginOption[] {
-  const resolvedOptions = {
+  const resolvedOptions: ResolvedSitexOptions = {
+    mdx: {
+      components: validateMdxComponentImports(options.mdx?.components),
+    },
     trailingSlash: options.trailingSlash ?? false,
   }
   const plugins: PluginOption[] = [sitexPlugin(resolvedOptions)]
@@ -117,6 +137,37 @@ export function sitex(options: SitexOptions = {}): PluginOption[] {
   return plugins
 }
 
+function validateMdxComponentImports(
+  components: Record<string, string> | undefined
+) {
+  if (!components) return {}
+
+  const validated: Record<string, string> = {}
+
+  for (const [name, moduleId] of Object.entries(components)) {
+    if (
+      !/^[A-Za-z][A-Za-z0-9-]*$/.test(name) ||
+      name === "constructor" ||
+      name === "prototype" ||
+      name === "__proto__"
+    ) {
+      throw new Error(
+        `Invalid MDX component name "${name}". Use a tag name like "pre" or "h2".`
+      )
+    }
+
+    if (typeof moduleId !== "string" || moduleId.trim() === "") {
+      throw new Error(
+        `MDX component "${name}" must point to a non-empty import path.`
+      )
+    }
+
+    validated[name] = moduleId
+  }
+
+  return validated
+}
+
 function sitexBuildInputPlugin(): Plugin {
   return {
     name: "sitex:build-input",
@@ -136,7 +187,7 @@ function sitexBuildInputPlugin(): Plugin {
   }
 }
 
-function sitexPlugin(options: Required<SitexOptions>): Plugin {
+function sitexPlugin(options: ResolvedSitexOptions): Plugin {
   let root = process.cwd()
   let config: ResolvedConfig
   let cleanedBuildOutput = false
@@ -241,7 +292,7 @@ function sitexPlugin(options: Required<SitexOptions>): Plugin {
       },
       async handler(code, id) {
         if (id.endsWith(".mdx")) {
-          return transformMdxPage(code, id, root)
+          return transformMdxPage(code, id, root, options)
         }
 
         if (hasContentExport(code)) {
@@ -418,7 +469,7 @@ function writeClientBuildEntriesSync(root: string) {
   return { islandClient, styles }
 }
 
-async function writeStaticHtml(root: string, options: Required<SitexOptions>) {
+async function writeStaticHtml(root: string, options: ResolvedSitexOptions) {
   const publicRoot = await findBuildPublicRoot(root)
   const manifest = await readManifest(publicRoot)
   const islandClientAsset = Object.values(manifest).find(
@@ -490,7 +541,7 @@ async function writeHtml(
   publicRoot: string,
   routePath: string,
   html: string,
-  options: Required<SitexOptions>
+  options: ResolvedSitexOptions
 ) {
   const file = routePathToHtmlFile(publicRoot, routePath, options.trailingSlash)
 
@@ -533,7 +584,7 @@ function collectServerRouteFilesSync(root: string) {
 
 async function collectPageDataRoutes(
   root: string,
-  options: Required<SitexOptions>
+  options: ResolvedSitexOptions
 ) {
   const files = await collectRouteFiles(root)
   const routes: PageDataRoute[] = []
@@ -577,7 +628,7 @@ async function collectPageDataRoutes(
 async function collectPageDataFromServer(
   root: string,
   server: ViteDevServer,
-  options: Required<SitexOptions>
+  options: ResolvedSitexOptions
 ) {
   const routes = await collectPageDataRoutes(root, options)
   const pages: PageData[] = []
@@ -603,7 +654,7 @@ async function collectPageDataFromServer(
 async function writeContentTypesFromServer(
   root: string,
   server: ViteDevServer,
-  options: Required<SitexOptions>
+  options: ResolvedSitexOptions
 ) {
   const typesFile = path.join(root, pagesTypesFile)
   const pages = await collectPageDataFromServer(root, server, options)
@@ -664,16 +715,19 @@ async function writeFileAtomic(file: string, content: string) {
   await rename(temporaryFile, file)
 }
 
-async function transformMdxPage(code: string, id: string, root: string) {
+async function transformMdxPage(
+  code: string,
+  id: string,
+  root: string,
+  options: ResolvedSitexOptions
+) {
   const file = normalizePath(path.relative(root, id))
-  const result = mdxToJs(code, {
-    development: false,
-    jsxImportSource: "react",
-  })
+  const { headings, result } = compileMdx(code)
   const { data, layoutFile } = await readMdxPageMetadata(
     root,
     file,
-    result.frontmatter
+    result.frontmatter,
+    headings
   )
 
   const mdxCode = result.code.replace(
@@ -689,13 +743,36 @@ async function transformMdxPage(code: string, id: string, root: string) {
 
   return [
     mdxCode,
-    `import Layout from ${JSON.stringify(`/${normalizePath(path.relative(root, layoutFile))}`)}`,
+    ...createMdxComponentImportCode(options.mdx.components),
+    `import * as LayoutModule from ${JSON.stringify(`/${normalizePath(path.relative(root, layoutFile))}`)}`,
+    `const Layout = LayoutModule.default`,
+    `const mdxComponentsDescriptor = Object.getOwnPropertyDescriptor(LayoutModule, "mdxComponents")`,
+    `const layoutMdxComponents = mdxComponentsDescriptor?.get ? mdxComponentsDescriptor.get.call(LayoutModule) : mdxComponentsDescriptor?.value`,
+    `const mdxComponents = Object.assign({}, configuredMdxComponents, layoutMdxComponents)`,
     `export const data = ${JSON.stringify(data)}`,
     `export default function MdxPage() {`,
     `  const { layout: _layout, path: _path, children: _children, ...props } = data`,
-    `  return _jsx(Layout, Object.assign({}, props, { children: _jsx(MarkdownContent, {}) }))`,
+    `  return _jsx(Layout, Object.assign({}, props, { children: _jsx(MarkdownContent, { components: mdxComponents }) }))`,
     `}`,
   ].join("\n")
+}
+
+function createMdxComponentImportCode(components: Record<string, string>) {
+  const entries = Object.entries(components)
+
+  return [
+    ...entries.map(
+      ([, moduleId], index) =>
+        `import MdxComponent${index} from ${JSON.stringify(moduleId)}`
+    ),
+    entries.length === 0
+      ? `const configuredMdxComponents = {}`
+      : `const configuredMdxComponents = { ${entries
+          .map(
+            ([name], index) => `${JSON.stringify(name)}: MdxComponent${index}`
+          )
+          .join(", ")} }`,
+  ]
 }
 
 async function writeMdxTypecheckFiles(root: string) {
@@ -710,14 +787,12 @@ async function writeMdxTypecheckFiles(root: string) {
 
   for (const file of files) {
     const code = await readFile(path.join(root, file), "utf8")
-    const result = mdxToJs(code, {
-      development: false,
-      jsxImportSource: "react",
-    })
+    const { headings, result } = compileMdx(code)
     const { data, layoutFile } = await readMdxPageMetadata(
       root,
       file,
-      result.frontmatter
+      result.frontmatter,
+      headings
     )
     const typecheckFile = path.join(typecheckRoot, `${file}.tsx`)
 
@@ -732,9 +807,21 @@ async function writeMdxTypecheckFiles(root: string) {
 async function readMdxPageMetadata(
   root: string,
   file: string,
-  frontmatter: { kind: string; value: string } | null | undefined
+  frontmatter: { kind: string; value: string } | null | undefined,
+  headings: MarkdownHeading[] = []
 ) {
-  const data = parseMdxFrontmatter(frontmatter, file)
+  const frontmatterData = parseMdxFrontmatter(frontmatter, file)
+
+  if (Object.hasOwn(frontmatterData, "headings")) {
+    throw new Error(
+      `Frontmatter in "${file}" cannot define reserved key "headings".`
+    )
+  }
+
+  const data: { [key: string]: JsonValue } = {
+    ...frontmatterData,
+    headings: headings as unknown as JsonValue,
+  }
   const layout = data.layout
 
   if (hasRouteParams(file)) {
@@ -799,6 +886,69 @@ function createMdxTypecheckCode(
   ].join("\n")
 }
 
+function compileMdx(code: string) {
+  const headings: MarkdownHeading[] = []
+  const usedSlugs = new Map<string, number>()
+
+  const result = mdxToJs(code, {
+    development: false,
+    hastPlugins: [
+      defineHastPlugin({
+        name: "sitex-heading-metadata",
+        element: {
+          filter: ["h1", "h2", "h3", "h4", "h5", "h6"],
+          visit(node, context) {
+            const label = context.textContent(node).replace(/\s+/g, " ").trim()
+            const depth = Number(node.tagName.slice(1))
+            const existingId = readHeadingId(node.properties.id)
+            const id = existingId || createUniqueSlug(label, usedSlugs)
+
+            if (existingId) {
+              usedSlugs.set(existingId, (usedSlugs.get(existingId) ?? 0) + 1)
+            } else {
+              context.setProperty(node, "id", id)
+            }
+
+            headings.push({
+              depth,
+              href: `#${id}`,
+              id,
+              label,
+            })
+          },
+        },
+      }),
+    ],
+    jsxImportSource: "react",
+  })
+
+  return { headings, result }
+}
+
+function readHeadingId(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : undefined
+}
+
+function createUniqueSlug(label: string, usedSlugs: Map<string, number>) {
+  const base = slugifyHeading(label) || "section"
+  const count = usedSlugs.get(base) ?? 0
+
+  usedSlugs.set(base, count + 1)
+
+  return count === 0 ? base : `${base}-${count + 1}`
+}
+
+function slugifyHeading(value: string) {
+  return value
+    .replace(/([a-z0-9])([A-Z])/g, "$1-$2")
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/&/g, " and ")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+}
+
 function createRelativeImport(fromFile: string, toFile: string) {
   const specifier = normalizePath(path.relative(path.dirname(fromFile), toFile))
 
@@ -825,7 +975,7 @@ function createVirtualRoutesCode() {
   ].join("\n")
 }
 
-function createPagesModuleCode(options: Required<SitexOptions>) {
+function createPagesModuleCode(options: ResolvedSitexOptions) {
   const trailingSlash = JSON.stringify(options.trailingSlash)
 
   return [

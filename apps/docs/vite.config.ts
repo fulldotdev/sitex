@@ -7,5 +7,15 @@ import { sitex } from "../../packages/sitex/src/vite/plugin"
 
 export default defineConfig({
   appType: "custom",
-  plugins: [react(), sitex(), tailwindcss()],
+  plugins: [
+    react(),
+    sitex({
+      mdx: {
+        components: {
+          pre: "@/components/mdx-components/pre",
+        },
+      },
+    }),
+    tailwindcss(),
+  ],
 })
