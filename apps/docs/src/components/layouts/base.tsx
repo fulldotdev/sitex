@@ -1,7 +1,5 @@
 import type { ReactNode } from "react"
 
-import { getPage } from "sitex:pages"
-
 import { Sidebar1 } from "@/components/blocks/sidebar-1"
 import "@/styles/globals.css"
 
@@ -17,24 +15,15 @@ export type NavigationLink = {
   label: string
 }
 
-const docsPagePaths = [
-  "/docs",
-  "/docs/installation",
-  "/docs/page-routing",
-  "/docs/content",
-  "/docs/rendering-and-assets",
-  "/docs/island-rendering",
-  "/docs/folder-structure",
+export const docsNavigation: NavigationLink[] = [
+  { href: "/docs", label: "Introduction" },
+  { href: "/docs/installation", label: "Installation" },
+  { href: "/docs/page-routing", label: "Page routing" },
+  { href: "/docs/content", label: "Pages API" },
+  { href: "/docs/rendering-and-assets", label: "Rendering and assets" },
+  { href: "/docs/island-rendering", label: "Island rendering" },
+  { href: "/docs/folder-structure", label: "Folder structure" },
 ]
-
-const docsPages = await Promise.all(docsPagePaths.map((path) => getPage(path)))
-
-export const docsNavigation: NavigationLink[] = docsPages
-  .filter((page) => page !== undefined)
-  .map((page) => ({
-    href: page.path,
-    label: typeof page.title === "string" ? page.title : page.path,
-  }))
 
 const site = {
   name: "Sitex Docs",

@@ -34,6 +34,7 @@ export type PageLayout<Props = unknown> = (
 export type MarkdownLayoutProps<TData extends object = object> = TData & {
   children: ReactNode
   headings?: readonly MarkdownHeading[]
+  path?: string
 }
 
 export type MarkdownHeading = {

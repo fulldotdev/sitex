@@ -246,7 +246,7 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
         collectHydrationEntries(code, absoluteFile, root, hydration)
       }
 
-      await writeMdxTypecheckFiles(root)
+      await writeMdxTypecheckFiles(root, options)
     },
 
     resolveId: {
@@ -407,7 +407,7 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
         }
 
         if (file.includes("/src/pages/") && file.endsWith(".mdx")) {
-          await writeMdxTypecheckFiles(root)
+          await writeMdxTypecheckFiles(root, options)
         }
 
         this.environment.hot.send({ type: "full-reload" })
@@ -729,6 +729,10 @@ async function transformMdxPage(
     result.frontmatter,
     headings
   )
+  const pagePath = routePathToPublicPath(
+    staticPageFileToPath(file),
+    options.trailingSlash
+  )
 
   const mdxCode = result.code.replace(
     /export\s+default\s+MDXContent\s*;?\s*$/,
@@ -752,7 +756,7 @@ async function transformMdxPage(
     `export const data = ${JSON.stringify(data)}`,
     `export default function MdxPage() {`,
     `  const { layout: _layout, path: _path, children: _children, ...props } = data`,
-    `  return _jsx(Layout, Object.assign({}, props, { children: _jsx(MarkdownContent, { components: mdxComponents }) }))`,
+    `  return _jsx(Layout, Object.assign({}, props, { path: ${JSON.stringify(pagePath)}, children: _jsx(MarkdownContent, { components: mdxComponents }) }))`,
     `}`,
   ].join("\n")
 }
@@ -775,7 +779,10 @@ function createMdxComponentImportCode(components: Record<string, string>) {
   ]
 }
 
-async function writeMdxTypecheckFiles(root: string) {
+async function writeMdxTypecheckFiles(
+  root: string,
+  options: ResolvedSitexOptions
+) {
   const typecheckRoot = path.join(root, mdxTypecheckDir)
   const files = await fg("src/pages/**/*.mdx", {
     cwd: root,
@@ -794,12 +801,16 @@ async function writeMdxTypecheckFiles(root: string) {
       result.frontmatter,
       headings
     )
+    const pagePath = routePathToPublicPath(
+      staticPageFileToPath(file),
+      options.trailingSlash
+    )
     const typecheckFile = path.join(typecheckRoot, `${file}.tsx`)
 
     await mkdir(path.dirname(typecheckFile), { recursive: true })
     await writeFileAtomic(
       typecheckFile,
-      createMdxTypecheckCode(typecheckFile, layoutFile, data)
+      createMdxTypecheckCode(typecheckFile, layoutFile, data, pagePath)
     )
   }
 }
@@ -865,7 +876,8 @@ async function readMdxPageMetadata(
 function createMdxTypecheckCode(
   typecheckFile: string,
   layoutFile: string,
-  data: { [key: string]: JsonValue }
+  data: { [key: string]: JsonValue },
+  pagePath: string
 ) {
   const dataEntries = Object.keys(data)
     .filter((key) => key !== "layout" && key !== "path" && key !== "children")
@@ -879,6 +891,7 @@ function createMdxTypecheckCode(
     `const { layout: _layout, path: _path, children: _children, ..._props } = data as typeof data & { path?: never; children?: never }`,
     `const layoutProps = {`,
     ...dataEntries,
+    `  path: ${JSON.stringify(pagePath)},`,
     `} satisfies Omit<ComponentProps<typeof Layout>, "children">`,
     ``,
     `export const typecheck = <Layout {...layoutProps}>{null}</Layout>`,

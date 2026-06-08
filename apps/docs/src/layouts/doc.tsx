@@ -16,14 +16,19 @@ type DocFrontmatter = {
   tocItems?: readonly TocItem[]
 }
 
-function findPathByTitle(title: string) {
-  return docsNavigation.find((item) => item.label === title)?.href ?? "/"
+function findPath(path: string | undefined, order: number | undefined) {
+  if (path) return path
+  if (order !== undefined) return docsNavigation[order - 1]?.href ?? "/"
+
+  return "/"
 }
 
 export default function DocMdxLayout({
   title,
   description,
   headings,
+  order,
+  path,
   tocItems,
   children,
 }: MarkdownLayoutProps<DocFrontmatter>) {
@@ -37,7 +42,7 @@ export default function DocMdxLayout({
     <DocLayout
       title={title}
       description={description}
-      path={findPathByTitle(title)}
+      path={findPath(path, order)}
       doc={doc}
     >
       {children}
