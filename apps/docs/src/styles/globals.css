@@ -605,6 +605,15 @@
     text-decoration: var(--shiki-dark-text-decoration, inherit) !important;
   }
 
+  .dark
+    [data-slot="typography"]
+    > .docs-code-block
+    > .docs-code-block-content
+    > pre
+    span[style*="--shiki-dark:#6A737D"] {
+    color: #8b949e !important;
+  }
+
   [data-slot="typography"] > .docs-code-block svg {
     @apply size-4;
   }
