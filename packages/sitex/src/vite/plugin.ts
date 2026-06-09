@@ -310,9 +310,9 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
 
     configureServer(server: ViteDevServer) {
       if (shouldGenerateContentTypes()) {
-        void writeContentTypesFromServer(root, server, options).catch(
+        void writePageDataTypesFromServer(root, server, options).catch(
           (error: unknown) => {
-            server.config.logger.error(formatContentTypeError(error))
+            server.config.logger.error(formatPageDataTypeError(error))
           }
         )
       }
@@ -403,7 +403,7 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
           shouldGenerateContentTypes() &&
           (file.includes("/src/pages/") || file.includes("/src/data/"))
         ) {
-          await writeContentTypesFromServer(root, update.server, options)
+          await writePageDataTypesFromServer(root, update.server, options)
         }
 
         if (file.includes("/src/pages/") && file.endsWith(".mdx")) {
@@ -489,7 +489,7 @@ async function writeStaticHtml(root: string, options: ResolvedSitexOptions) {
 
   try {
     if (shouldGenerateContentTypes()) {
-      await writeContentTypesFromServer(root, server, options)
+      await writePageDataTypesFromServer(root, server, options)
     }
 
     const { getRoutes, injectRouteHtmlAssets, renderMatchedRoute } =
@@ -651,7 +651,7 @@ async function collectPageDataFromServer(
   return pages
 }
 
-async function writeContentTypesFromServer(
+async function writePageDataTypesFromServer(
   root: string,
   server: ViteDevServer,
   options: ResolvedSitexOptions
@@ -663,10 +663,10 @@ async function writeContentTypesFromServer(
   await writeFileAtomic(typesFile, await createPagesTypesCode(pages))
 }
 
-function formatContentTypeError(error: unknown) {
+function formatPageDataTypeError(error: unknown) {
   const message = error instanceof Error ? error.message : String(error)
 
-  return `[sitex] Could not generate content types: ${message}`
+  return `[sitex] Could not generate page data types: ${message}`
 }
 
 function shouldReloadForFile(file: string) {

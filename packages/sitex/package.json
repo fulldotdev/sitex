@@ -1,6 +1,6 @@
 {
   "name": "@fulldotdev/sitex",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "A simpler React framework for building content sites.",
   "homepage": "https://github.com/fulldotdev/sitex#readme",
   "bugs": {

@@ -65,16 +65,16 @@ Route rendering internals are framework-owned virtual module code. Apps should n
 _Avoid_: public router helpers
 
 **TypeScript config export**:
-`sitex/tsconfig` may remain as a convenience for framework-required compiler settings and JSX directive types. It should not become a broad app preference bundle.
+`@fulldotdev/sitex/tsconfig` may remain as a convenience for framework-required compiler settings and JSX directive types. It should not become a broad app preference bundle.
 _Avoid_: app style config
 
 **Directive validation**:
 TypeScript may broadly allow `client:*` attributes, but the compiler is responsible for rejecting invalid directive placement such as HTML elements or local components.
 _Avoid_: type-only enforcement
 
-**Source export**:
-Sitex may export TypeScript source directly during the experiment because the reference app is the only consumer and Vite can consume the source. A separate framework library build should wait for publishing or non-Vite consumption.
-_Avoid_: premature package build
+**Package build**:
+Sitex is published as `@fulldotdev/sitex` from `packages/sitex`. Public app-facing imports should use exported package entrypoints, while the in-repo docs app may import package source directly when dogfooding unpublished changes.
+_Avoid_: app imports from unexported internals
 
 **Production build**:
 The public production build command should be `vp build`. Any custom Sitex build script is experiment scaffolding; cleanup should keep static route rendering and asset emission inside the Sitex Vite plugin.
@@ -117,7 +117,7 @@ The imported React component that carries a `client:*` directive. An island root
 _Avoid_: intrinsic island, inline island
 
 **Rendering mode**:
-The way Sitex decides where a component is rendered. Current modes are static rendering by default, static plus client rendering with `client:load`, and client-only rendering with `client:only`.
+The way Sitex decides where a page or component is rendered. Current page modes are static by default and explicit request-time rendering with `export const render = "server"`. Current island modes are static plus client rendering with `client:load`, `client:visible`, `client:idle`, or `client:media`, and browser-only rendering with `client:only`.
 _Avoid_: hydration mode
 
 **Static rendering**:
@@ -125,11 +125,11 @@ The default rendering mode. Static rendering produces HTML ahead of serving requ
 _Avoid_: server rendering
 
 **Client rendering**:
-Browser rendering used for interactivity. `client:load` combines static rendering with client rendering, while `client:only` uses client rendering only.
+Browser rendering used for interactivity. `client:load`, `client:visible`, `client:idle`, and `client:media` combine static rendering with client rendering, while `client:only` uses client rendering only.
 _Avoid_: hydration
 
 **Server rendering**:
-Request-time rendering on a server. Sitex does not support server rendering in the current experiment.
+Request-time page rendering on a server. Sitex supports this only through explicit route opt-in with `export const render = "server"`.
 _Avoid_: static rendering
 
 **Server directive**:
@@ -139,6 +139,10 @@ _Avoid_: current API
 **Client-loaded island**:
 An island marked with `client:load`. A client-loaded island is statically rendered first and then client-rendered for interactivity.
 _Avoid_: browser-only island
+
+**Lazy island**:
+An island marked with `client:visible`, `client:idle`, or `client:media`. A lazy island is statically rendered first and then client-rendered after the chosen browser condition is met.
+_Avoid_: separate route, server island
 
 **Static children**:
 Children passed through an island boundary as static slot HTML. Static children stay visible but do not become live React children in the parent island's client tree.
@@ -187,9 +191,6 @@ The current `HeadContent` and `Scripts` helpers leak build asset concerns into t
 **Document validation**:
 Sitex should not validate document structure beyond what it needs for asset injection. Missing insertion points should produce targeted errors only when injection cannot proceed.
 
-**Client directive set**:
-The current client directive set is intentionally limited to `client:load` and `client:only`. Other client timing directives should wait until the core route and rendering model is cleaned up.
-
 **Nested island transform**:
 Static children should be allowed to contain independent islands. The current compiler may miss literal nested `client:*` directives inside the same transformed JSX subtree; revisit this in the later cleanup/refactor.
 
@@ -202,9 +203,9 @@ _Avoid_: `children:include`
 
 ## Example Dialogue
 
-Developer: "Should this service page be an SSR route?"
+Developer: "Should this service page be a server route?"
 
-Domain expert: "No. It should be a static route. For v0, make it a local route unless we have a clear need to generate many static routes from data."
+Domain expert: "No. It should be a static route unless it actually needs request-time data."
 
 Developer: "Where do page metadata and scripts belong?"
 

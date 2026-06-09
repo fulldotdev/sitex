@@ -1,5 +1,5 @@
 [build]
-command = "pnpm --filter @fulldotdev/sitex build && NITRO_PRESET=netlify pnpm --filter docs build"
+command = "pnpm --filter @fulldotdev/sitex build && pnpm --filter docs build"
 publish = "apps/docs/dist"
 
 [build.environment]

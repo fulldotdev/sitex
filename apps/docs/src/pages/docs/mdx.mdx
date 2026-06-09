@@ -1,0 +1,101 @@
+---
+layout: "doc"
+title: "MDX pages"
+description: "Create prose pages with Markdown, React components, and typed layouts."
+order: 5
+---
+
+## Overview
+
+Use `.mdx` files for docs, articles, changelogs, and other prose-heavy pages. MDX pages live in `src/pages` and require YAML frontmatter with a `layout` value.
+
+```mdx
+---
+layout: post
+title: Building with SiteX
+description: How route-owned content keeps pages local.
+---
+
+# Building with SiteX
+
+This body is passed to the layout as `children`.
+```
+
+`layout: post` uses `src/layouts/post.tsx`.
+
+## Layouts
+
+An MDX layout receives frontmatter fields and `children`.
+
+```tsx
+import type { MarkdownLayoutProps } from "@fulldotdev/sitex"
+
+type Props = MarkdownLayoutProps<{
+  title: string
+  description: string
+}>
+
+export default function PostLayout({ title, description, children }: Props) {
+  return (
+    <article>
+      <h1>{title}</h1>
+      <p>{description}</p>
+      {children}
+    </article>
+  )
+}
+```
+
+The `layout` field selects the layout. It is not passed to the layout component.
+
+## Page Data
+
+MDX frontmatter is available through [Pages API](/docs/content).
+
+Reserved keys:
+
+1. `path` and `children` cannot be defined in page data.
+2. `headings` cannot be defined in MDX frontmatter.
+3. `layout` is included in page data but not passed to the layout component.
+
+## Path And Headings
+
+Layouts can receive the route path and document headings.
+
+```tsx
+import type { MarkdownLayoutProps } from "@fulldotdev/sitex"
+
+type Props = MarkdownLayoutProps<{
+  title: string
+}>
+
+export default function DocsLayout({ title, path, headings, children }: Props) {
+  return (
+    <main>
+      <h1>{title}</h1>
+      <nav>
+        {headings?.map((heading) => (
+          <a href={heading.href} key={heading.id}>
+            {heading.label}
+          </a>
+        ))}
+      </nav>
+      {children}
+    </main>
+  )
+}
+```
+
+Use `headings` for table-of-contents UI. Use `path` for navigation, breadcrumbs, and canonical links.
+
+## React Components
+
+Import React components directly in MDX.
+
+```mdx
+import { Alert } from "@/components/ui/alert"
+
+<Alert>Use MDX for prose, TSX for heavily custom pages.</Alert>
+```
+
+Use [MDX components](/docs/mdx-components) to customize Markdown elements across pages.

@@ -1,0 +1,28 @@
+---
+layout: "doc"
+title: "Deployment"
+description: "Deploy static SiteX sites and sites with server routes."
+order: 10
+---
+
+## Overview
+
+Static-only SiteX sites deploy like normal Vite sites.
+
+If any route exports `render = "server"`, deploy to a host that can run server routes. Netlify, Vercel, and Cloudflare are detected automatically.
+
+## Static Sites
+
+```bash
+pnpm build
+```
+
+Publish the generated output directory for your app.
+
+## Server Routes
+
+Server routes run at request time and are not written as static HTML files.
+
+```tsx
+export const render = "server"
+```

@@ -1,20 +1,32 @@
 # @fulldotdev/sitex
 
+## 0.3.0
+
+### Minor Changes
+
+- Add MDX pages with layout-based rendering, page data from MDX frontmatter, and configurable MDX components.
+
+  Add server-rendered TSX pages through `export const render = "server"`, while keeping static routes as the default build output.
+
+  Improve island rendering with `client:load`, `client:only`, `client:visible`, `client:idle`, and `client:media`.
+
+  Refresh the documentation for the 0.3 page model, deployment behavior, component rendering, and project structure.
+
 ## 0.2.1
 
 ### Patch Changes
 
-- [`8a6ef88`](https://github.com/fulldotdev/sitex/commit/8a6ef88b4148ab99f5fdad0217ddbbbc33476055) Thanks [@silveltman](https://github.com/silveltman)! - Add fallback `sitex:content` types so projects can typecheck before generated content types exist.
+- [`8a6ef88`](https://github.com/fulldotdev/sitex/commit/8a6ef88b4148ab99f5fdad0217ddbbbc33476055) Thanks [@silveltman](https://github.com/silveltman)! - Add fallback `sitex:pages` types so projects can typecheck before generated page data types exist.
 
 ## 0.2.0
 
 ### Minor Changes
 
-- [`00eab4d`](https://github.com/fulldotdev/sitex/commit/00eab4d753c28b307e0dd60ea7814c8d9e4aca56) Thanks [@silveltman](https://github.com/silveltman)! - Add a typed route content API through `sitex:content`, including generated content types, `getPages`, and `getPage`.
+- [`00eab4d`](https://github.com/fulldotdev/sitex/commit/00eab4d753c28b307e0dd60ea7814c8d9e4aca56) Thanks [@silveltman](https://github.com/silveltman)! - Add a typed route page data API through `sitex:pages`, including generated page data types, `getPages`, and `getPage`.
 
   Update SiteX for Vite 8, switch package bundling to Rolldown, externalize peer dependency subpaths correctly, and build CSS entry points through Vite's Rolldown input configuration.
 
-  Refresh the documentation site with a Content API page, content-driven docs navigation, hydrated code-block copy buttons, and updated installation guidance.
+  Refresh the documentation site with a Pages API page, page-data-driven docs navigation, hydrated code-block copy buttons, and updated installation guidance.
 
 ## 0.1.3
 

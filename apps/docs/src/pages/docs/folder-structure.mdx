@@ -1,77 +1,50 @@
 ---
 layout: "doc"
 title: "Folder structure"
-description: "What Sitex requires and how we recommend organizing content sites."
-order: 7
+description: "Required folders and recommended project shape."
+order: 11
 ---
 
 ```text
 src/
-  components/
-    layouts/
-      base.tsx
-      home.tsx
-      doc.tsx
-    blocks/
-      hero-1.tsx
-      features-1.tsx
-      doc-1.tsx
-      sidebar-1.tsx
-    ui/
-      button.tsx
-      typography.tsx
   pages/
     index.tsx
     docs/
       index.mdx
-      content.mdx
-      island-rendering.mdx
-      page-routing.mdx
-      rendering-and-assets.mdx
-      folder-structure.mdx
+  layouts/
+    base.tsx
+    doc.tsx
+    post.tsx
+  components/
+    blocks/
+      hero.tsx
+      sidebar.tsx
+    ui/
+      button.tsx
+      typography.tsx
 ```
 
-## pages folder for routing
+## Required Folders
 
-The only folder Sitex really cares about is `src/pages`. It contains the TSX and MDX files that become routes.
+Sitex requires `src/pages`. TSX and MDX files in this folder become routes.
 
-1. `src/pages/index.tsx` maps to `/`.
-2. `src/pages/docs/index.mdx` maps to `/docs`.
-3. `src/pages/docs/folder-structure.mdx` maps to `/docs/folder-structure`.
+MDX pages also use `src/layouts`.
 
-Import CSS from routes, layouts, or components. SiteX uses Vite's build graph to find the production CSS assets. See [Rendering and assets](/docs/rendering-and-assets) for the build behavior.
+1. `layout: "doc"` uses `src/layouts/doc.tsx`.
+2. `layout: "post"` uses `src/layouts/post.tsx`.
 
-Keep route files thin. A route should choose a layout and pass content into it, not repeat the full page shell.
+## Recommended Shape
 
-Shared chrome belongs in layouts, reusable page sections belong in blocks, and low-level design pieces belong in UI components. This is an opinionated structure for maintainability, not a Sitex requirement.
+Keep routes thin. Routes choose layouts and provide page content.
 
-## components folder recommendations
+Use `src/layouts/base.tsx` for shared metadata, navigation, and site chrome.
 
-The `src/components` folder is a recommendation, not a Sitex requirement. We use three levels: layouts, blocks, and UI components.
+Use `src/components` for reusable implementation pieces. This folder is a convention, not a Sitex requirement.
 
-### layouts
+## Blocks
 
-Always start with `src/components/layouts/base.tsx` for the document shell, metadata, navigation, and site chrome.
+Place blocks in `src/components/blocks`. Blocks are reusable page sections, such as hero sections, feature grids, article frames, and sidebars.
 
-Add one layout file for each unique page shape, such as `home.tsx`, `doc.tsx`, `landing.tsx`, or `case-study.tsx`. Layouts compose blocks and decide the page-level structure.
+## UI
 
-### blocks
-
-Blocks live in `src/components/blocks`. A block is a reusable page section, such as a hero, feature grid, CTA, pricing table, article frame, or sidebar shell.
-
-Blocks own section-level layout and are mainly built from UI components.
-
-### ui
-
-UI components live in `src/components/ui`. These are low-level design system pieces: buttons, typography, inputs, breadcrumbs, tiles, and sidebar primitives.
-
-UI components should stay generic. They should not know about one route, one marketing page, or one content model.
-
-## TSX and MDX content
-
-Use TSX routes when the whole page is component-heavy. Use MDX routes for prose pages that should read like documents but still import React components for examples, alerts, and interactive islands.
-
-- **TSX routes:** best for landing pages, custom layouts, dynamic examples, and pages where most content is structured data.
-- **MDX routes:** best for docs, articles, changelogs, and prose-heavy pages.
-- **Typed frontmatter:** MDX frontmatter is checked against the selected layout component props through generated TSX mirrors.
-- **Same component model:** both route types use local React layouts and components. MDX adds a prose-friendly authoring format; it does not add a CMS layer.
+Place UI components in `src/components/ui`. UI components are low-level design system pieces, such as buttons, typography, inputs, breadcrumbs, and sidebar primitives.

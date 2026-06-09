@@ -15,7 +15,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
   </AlertDescription>
 </Alert>
 
-## AI agent install
+## AI Agent Install
 
 Give your agent this instruction from inside the project you want to set up:
 
@@ -23,21 +23,19 @@ Give your agent this instruction from inside the project you want to set up:
 Read https://sitex.full.dev/docs/installation and install SiteX in this project.
 
 Follow the manual install steps on that page: install the package, add the Vite plugin,
-extend the SiteX TypeScript config, add the scripts, and create the first route.
+extend the SiteX TypeScript config, and create the first page.
 ```
 
-## Manual install
+## Manual Install
 
-Install the SiteX package together with React, Vite+, and the Vite packages your app needs.
+Install SiteX, React, Vite+, and the Vite packages your app needs.
 
 ```bash
 pnpm add @fulldotdev/sitex react react-dom vite vite-plus @vitejs/plugin-react
 pnpm add -D typescript @types/react @types/react-dom
 ```
 
-If pnpm asks about dependency build scripts, approve the packages your project trusts in your workspace configuration.
-
-## Vite config
+## Vite Config
 
 Add the SiteX plugin to `vite.config.ts`. Set `appType` to `custom` so Vite does not expect a normal single-page app fallback.
 
@@ -54,7 +52,7 @@ export default defineConfig({
 
 SiteX writes slashless URLs by default. Pass `sitex({ trailingSlash: true })` if you want directory index output and trailing-slash paths.
 
-## TypeScript config
+## TypeScript Config
 
 Extend the SiteX TypeScript config so JSX client directives like `client:load`, `client:only`, `client:visible`, `client:idle`, and `client:media` are accepted.
 
@@ -76,34 +74,9 @@ Extend the SiteX TypeScript config so JSX client directives like `client:load`, 
 }
 ```
 
-## Scripts
+## First Page
 
-SiteX runs through Vite+. Use the Vite+ commands for development, production builds, and local previews.
-
-```json
-{
-  "scripts": {
-    "dev": "vp dev",
-    "build": "vp build",
-    "preview": "vp preview",
-    "check": "vp check"
-  }
-}
-```
-
-## Build behavior
-
-`vp dev` starts the development server and lets SiteX render routes from `src/pages` on request.
-
-`vp build` writes static HTML to `dist`. SiteX emits one HTML file per static route, injects the production CSS, and adds the island client script only when a page needs client rendering. See [Rendering and assets](/docs/rendering-and-assets) for the full behavior.
-
-`vp preview` serves the built output locally, so you can verify the same static files that will be deployed.
-
-Import CSS from routes, layouts, or components. SiteX builds those files with Vite and injects the production stylesheet links into generated HTML.
-
-## First page
-
-Create `src/pages/index.tsx` for a TSX route, or create an MDX page with frontmatter and a matching layout in `src/layouts`. Page files in `src/pages` become static routes.
+Create `src/pages/index.tsx`.
 
 ```tsx
 export default function HomePage() {
@@ -120,3 +93,26 @@ export default function HomePage() {
   )
 }
 ```
+
+`src/pages/index.tsx` becomes `/`. Read [Routing](/docs/page-routing) for file-to-URL behavior, or [MDX pages](/docs/mdx) for prose pages with `src/layouts`.
+
+## Build Behavior
+
+SiteX runs through Vite+.
+
+```bash
+vp dev
+vp build
+vp preview
+```
+
+`vp dev` starts the development server. `vp build` writes one HTML file per static route, includes production CSS, and adds the island client script only when a page needs client rendering. `vp preview` serves the built output locally.
+
+## Next Steps
+
+1. Read [Routing](/docs/page-routing) for the route types.
+2. Read [TSX pages](/docs/tsx-pages) for static, dynamic, and server routes.
+3. Read [MDX pages](/docs/mdx) for prose pages with layouts.
+4. Read [Pages API](/docs/content) for indexes, cards, and navigation from route metadata.
+5. Read [Component rendering](/docs/island-rendering) for browser interactivity.
+6. Read [Deployment](/docs/deployment) before deploying server routes.

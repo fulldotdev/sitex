@@ -1,19 +1,19 @@
 ---
 layout: "doc"
-title: "Island rendering"
-description: "Client rendering with explicit island boundaries."
-order: 6
+title: "Component rendering"
+description: "Add browser interactivity to imported React components."
+order: 9
 ---
 
 ## Overview
 
-Sitex renders everything statically unless an imported component uses a client directive. That directive creates an island: a small client-rendered boundary inside the static page.
+SiteX renders components statically unless an imported component uses a client directive.
 
-The island client script is only added to pages that actually contain an island. Pages without client directives stay static HTML.
+Client directives only work on imported React components. Do not put them on HTML elements or components declared in the same file.
 
-## Choosing directives
+## Choosing Directives
 
-Use the least eager directive that still matches the interaction. This keeps the page responsive without loading every island at the same time.
+Use the least eager directive that still matches the interaction.
 
 1. Use `client:load` for controls that must be interactive as soon as possible.
 2. Use `client:idle` for page chrome that is already useful as static HTML, such as a sidebar or theme-aware shell.
@@ -22,7 +22,7 @@ Use the least eager directive that still matches the interaction. This keeps the
 
 ## `client:load`
 
-Add `client:load` to an imported React component when it should render as static HTML first and hydrate immediately in the browser. Reach for this when delayed interactivity would be noticeable.
+Hydrates immediately.
 
 ```tsx
 import Search from "@/components/search"
@@ -34,7 +34,7 @@ export default function Page() {
 
 ## `client:only`
 
-Add `client:only` when a component should be invisible in the static HTML and render only in the browser.
+Renders only in the browser.
 
 ```tsx
 import Search from "@/components/search"
@@ -46,7 +46,7 @@ export default function Page() {
 
 ## `client:visible`
 
-Add `client:visible` when a component should render as static HTML first and hydrate when it enters the viewport. This works well for repeated widgets on long pages.
+Hydrates when the component enters the viewport.
 
 ```tsx
 import CopyButton from "@/components/copy-button"
@@ -58,7 +58,7 @@ export default function Page() {
 
 ## `client:idle`
 
-Add `client:idle` when a component should render as static HTML first and hydrate after the browser has idle time. This is a good fit for UI that enhances already-rendered markup.
+Hydrates after the browser has idle time.
 
 ```tsx
 import Sidebar from "@/components/sidebar"
@@ -70,7 +70,7 @@ export default function Page() {
 
 ## `client:media`
 
-Add `client:media` with a media query when a component should hydrate only after that query matches.
+Hydrates after a media query matches.
 
 ```tsx
 import DesktopNav from "@/components/desktop-nav"
@@ -82,10 +82,8 @@ export default function Page() {
 
 ## Boundaries
 
-Island roots must be imported React components. A directive on an HTML element or a locally declared component is rejected.
+Island roots must be imported React components.
 
 Props must be JSON-serializable data. Functions, symbols, cyclic values, and React elements cannot cross the static-to-client boundary as props.
 
 Children are rendered as static slot HTML. If those children contain another island, it renders independently with its own client boundary.
-
-Sitex reads the static children marker from the direct children of the island root. Nested islands therefore cannot accidentally steal their parent island's static children.

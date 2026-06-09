@@ -15,15 +15,38 @@ export type NavigationLink = {
   label: string
 }
 
-export const docsNavigation: NavigationLink[] = [
-  { href: "/docs", label: "Introduction" },
-  { href: "/docs/installation", label: "Installation" },
-  { href: "/docs/page-routing", label: "Page routing" },
-  { href: "/docs/content", label: "Pages API" },
-  { href: "/docs/rendering-and-assets", label: "Rendering and assets" },
-  { href: "/docs/island-rendering", label: "Island rendering" },
-  { href: "/docs/folder-structure", label: "Folder structure" },
+const docsNavigationGroups = [
+  {
+    label: "Start",
+    links: [
+      { href: "/docs", label: "Introduction" },
+      { href: "/docs/installation", label: "Installation" },
+      { href: "/docs/folder-structure", label: "Folder structure" },
+      { href: "/docs/deployment", label: "Deployment" },
+    ],
+  },
+  {
+    label: "Pages",
+    links: [
+      { href: "/docs/page-routing", label: "Routing" },
+      { href: "/docs/tsx-pages", label: "TSX pages" },
+      { href: "/docs/mdx", label: "MDX pages" },
+      { href: "/docs/rendering-and-assets", label: "Page rendering" },
+      { href: "/docs/content", label: "Pages API" },
+    ],
+  },
+  {
+    label: "Components",
+    links: [
+      { href: "/docs/island-rendering", label: "Component rendering" },
+      { href: "/docs/mdx-components", label: "MDX components" },
+    ],
+  },
 ]
+
+export const docsNavigation: NavigationLink[] = docsNavigationGroups.flatMap(
+  (group) => group.links
+)
 
 const site = {
   name: "Sitex Docs",
@@ -36,12 +59,7 @@ const site = {
     navigation: docsNavigation,
   },
   sidebar: {
-    navigation: [
-      {
-        label: "Documentation",
-        links: docsNavigation,
-      },
-    ],
+    navigation: docsNavigationGroups,
   },
 }
 

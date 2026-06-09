@@ -1,37 +1,43 @@
 ---
 layout: "doc"
-title: "Page routing"
-description: "Map TSX and MDX files in the pages folder to routes."
+title: "Routing"
+description: "Choose TSX or MDX routes and understand how files map to URLs."
 order: 3
 ---
 
 ## Overview
 
-Sitex uses file-based routing. TSX and MDX files in `src/pages` become routes. This is the required part of the folder structure explained in [Folder structure](/docs/folder-structure).
+TSX and MDX files in `src/pages` become routes. Routes are static by default.
 
-Routes are static unless they export `render = "server"`. See [Rendering and assets](/docs/rendering-and-assets) for how static and server routes are rendered.
+## Route Types
 
-## Route files
+Use TSX for component-heavy pages, dynamic routes, and server routes. Use MDX for prose-heavy pages.
 
-A TSX route exports the page component for one URL. An MDX route uses frontmatter to choose a layout and renders its body as that layout's children.
+1. [TSX pages](/docs/tsx-pages) export a React component from `.tsx`.
+2. [MDX pages](/docs/mdx) use Markdown, frontmatter, and a layout.
+3. [Pages API](/docs/content) lets route metadata power indexes, cards, and navigation.
 
-1. `src/pages/about.tsx` becomes `/about`.
-2. `src/pages/docs/page-routing.mdx` becomes `/docs/page-routing`.
+## File Mapping
 
-## Index routes
-
-An `index.tsx` or `index.mdx` file maps to its parent folder. This keeps root pages and section landing pages explicit.
+Files map to URLs by their path inside `src/pages`.
 
 1. `src/pages/index.tsx` becomes `/`.
 2. `src/pages/docs/index.mdx` becomes `/docs`.
+3. `src/pages/about.tsx` becomes `/about`.
+4. `src/pages/docs/routing.mdx` becomes `/docs/routing`.
 
-## Dynamic routes
+## Static Routes
 
-A route segment wrapped in brackets becomes a route parameter. Static dynamic routes must export `paths`, so Sitex knows which HTML files to build.
+Static routes are rendered during build and deployed as HTML.
 
-1. `src/pages/blog/[slug].tsx` can become `/blog/hello-world`.
-2. Each entry in `paths` provides the params for one generated page.
+## Dynamic Routes
 
-## Server routes
+A bracket segment becomes a route parameter. Dynamic static routes use TSX and export `paths`.
 
-Export `render = "server"` for request-time routes. Server routes can read the incoming `request` from page context and are not written as static HTML files.
+Read [TSX pages](/docs/tsx-pages) for a full dynamic route example.
+
+## Server Routes
+
+Export `render = "server"` from a TSX route when a page needs request-time data.
+
+Read [Page rendering](/docs/rendering-and-assets) for how static and server routes are rendered, and [Deployment](/docs/deployment) before deploying server routes.
