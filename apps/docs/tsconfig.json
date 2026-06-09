@@ -16,6 +16,11 @@
   "exclude": ["dist"],
   "compilerOptions": {
     "paths": {
+      "@fulldotdev/sitex": ["../../packages/sitex/src/index.ts"],
+      "@fulldotdev/sitex/island": [
+        "../../packages/sitex/src/hydration/server.tsx"
+      ],
+      "@fulldotdev/sitex/plugin": ["../../packages/sitex/src/vite/plugin.ts"],
       "@/*": ["./src/*"]
     }
   }
