@@ -259,6 +259,5 @@ client:only
 client:visible
 client:idle
 client:media
-server:defer
 children:include
 ```

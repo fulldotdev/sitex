@@ -6,11 +6,11 @@
 
 - Add MDX pages with layout-based rendering, page data from MDX frontmatter, and configurable MDX components.
 
-  Add server-rendered TSX pages through `export const render = "server"`, while keeping static routes as the default build output.
+  Keep TSX and MDX routes static, with explicit dynamic static paths for generated HTML output.
 
   Improve island rendering with `client:load`, `client:only`, `client:visible`, `client:idle`, and `client:media`.
 
-  Refresh the documentation for the 0.3 page model, deployment behavior, component rendering, and project structure.
+  Refresh the documentation for the 0.3 page model, component rendering, and project structure.
 
 ## 0.2.1
 

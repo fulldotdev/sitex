@@ -16,7 +16,6 @@ catalog:
   "@ianvs/prettier-plugin-sort-imports": ^4.7.1
   prettier-plugin-tailwindcss: ^0.8.0
   html-minifier-next: ^6.2.8
-  nitro: 3.0.260603-beta
   satteri: ^0.8.0
   yaml: ^2.9.0
 

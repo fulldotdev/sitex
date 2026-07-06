@@ -11,7 +11,7 @@ TSX and MDX files in `src/pages` become routes. Routes are static by default.
 
 ## Route Types
 
-Use TSX for component-heavy pages, dynamic routes, and server routes. Use MDX for prose-heavy pages.
+Use TSX for component-heavy pages and dynamic routes. Use MDX for prose-heavy pages.
 
 1. [TSX pages](/docs/tsx-pages) export a React component from `.tsx`.
 2. [MDX pages](/docs/mdx) use Markdown, frontmatter, and a layout.
@@ -36,8 +36,4 @@ A bracket segment becomes a route parameter. Dynamic static routes use TSX and e
 
 Read [TSX pages](/docs/tsx-pages) for a full dynamic route example.
 
-## Server Routes
-
-Export `render = "server"` from a TSX route when a page needs request-time data.
-
-Read [Page rendering](/docs/rendering-and-assets) for how static and server routes are rendered, and [Deployment](/docs/deployment) before deploying server routes.
+Read [Page rendering](/docs/rendering-and-assets) for how routes are rendered and how assets are included.

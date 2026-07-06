@@ -1,13 +1,13 @@
 ---
 layout: "doc"
 title: "TSX pages"
-description: "Create static, dynamic, and server-rendered pages with React components."
+description: "Create static and dynamic pages with React components."
 order: 4
 ---
 
 ## Overview
 
-Use TSX pages for component-heavy pages, dynamic paths, and request-time server rendering.
+Use TSX pages for component-heavy pages and dynamic paths.
 
 ```tsx
 export default function AboutPage() {
@@ -65,31 +65,6 @@ export default function BlogPost({
 ```
 
 `src/pages/blog/[slug].tsx` can render `/blog/hello-world` and `/blog/second-post`.
-
-## Server Pages
-
-Export `render = "server"` when a page needs request-time data.
-
-```tsx
-import type { PageContext } from "@fulldotdev/sitex"
-
-export const render = "server"
-
-export default function PreviewPage({ request }: PageContext) {
-  const url = request ? new URL(request.url) : undefined
-
-  return (
-    <html lang="en">
-      <body>
-        <h1>Preview</h1>
-        <p>{url?.searchParams.get("token")}</p>
-      </body>
-    </html>
-  )
-}
-```
-
-Keep pages static unless they need the request.
 
 ## Page Data
 

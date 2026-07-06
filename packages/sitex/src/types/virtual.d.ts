@@ -20,7 +20,6 @@ declare module "virtual:sitex-render" {
     assetTags?: string
     islandClientPreamble?: string
     islandClientSrc?: string
-    request?: Request
   }
 
   type RenderResult = {
@@ -39,10 +38,6 @@ declare module "virtual:sitex-render" {
     params: Record<string, string>,
     options?: RenderOptions
   ): Promise<string>
-  export function renderServerResponse(
-    request: Request,
-    options?: RenderOptions
-  ): Promise<Response | undefined>
 }
 
 declare module "sitex:pages" {

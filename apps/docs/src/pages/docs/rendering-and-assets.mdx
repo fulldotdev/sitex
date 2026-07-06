@@ -1,13 +1,13 @@
 ---
 layout: "doc"
 title: "Page rendering"
-description: "How SiteX renders static pages, dynamic pages, server pages, and route CSS."
+description: "How SiteX renders static pages, dynamic pages, and route CSS."
 order: 8
 ---
 
 ## Overview
 
-Sitex renders pages to HTML at build time unless a route opts into server rendering.
+Sitex renders pages to HTML at build time.
 
 ## Static Routes
 
@@ -40,29 +40,6 @@ export default function Page({ params }) {
   return <h1>{params.slug}</h1>
 }
 ```
-
-## Server Routes
-
-Export `render = "server"` when a route needs the incoming request.
-
-```tsx
-export const render = "server"
-
-export default function RequestPage({ request }) {
-  const url = new URL(request.url)
-
-  return (
-    <html lang="en">
-      <body>
-        <h1>Server route</h1>
-        <p>{url.pathname}</p>
-      </body>
-    </html>
-  )
-}
-```
-
-Server routes are not written as static HTML files. See [Deployment](/docs/deployment).
 
 ## CSS Assets
 

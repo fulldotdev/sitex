@@ -30,7 +30,6 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 import fg from "fast-glob"
-import { nitro } from "nitro/vite"
 import { defineHastPlugin, mdxToJs } from "satteri"
 import { parse as parseYaml } from "yaml"
 
@@ -117,20 +116,6 @@ export function sitex(options: SitexOptions = {}): PluginOption[] {
     trailingSlash: options.trailingSlash ?? false,
   }
   const plugins: PluginOption[] = [sitexPlugin(resolvedOptions)]
-
-  if (
-    process.env.SITEX_INTERNAL_RENDER !== "1" &&
-    hasServerPagesSync(process.cwd())
-  ) {
-    plugins.push(
-      ...(nitro({
-        renderer: {
-          handler: packageFile("nitro/renderer", "ts"),
-        },
-        serverDir: ".",
-      }) as PluginOption[])
-    )
-  }
 
   plugins.push(sitexBuildInputPlugin())
 
@@ -225,11 +210,7 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
     async buildStart() {
       hydration.clear()
 
-      if (
-        config.command === "build" &&
-        !cleanedBuildOutput &&
-        process.env.SITEX_INTERNAL_RENDER !== "1"
-      ) {
+      if (config.command === "build" && !cleanedBuildOutput) {
         cleanedBuildOutput = true
         await rm(path.join(root, "dist"), { recursive: true, force: true })
       }
@@ -277,7 +258,7 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
         }
 
         if (id === resolvedVirtualRenderId) {
-          return createJavaScriptModule(createVirtualRenderCode(root))
+          return createJavaScriptModule(createVirtualRenderCode())
         }
 
         if (id === resolvedVirtualPagesId) {
@@ -324,11 +305,10 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
         }
 
         const url = req.url?.split("?")[0] ?? "/"
-        const request = createWebRequest(req)
 
         try {
           const { render } = await importServerModule(server, virtualRenderId)
-          const initialHtml = await render(url, { request })
+          const initialHtml = await render(url)
 
           if (!initialHtml) {
             next()
@@ -344,7 +324,6 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
             assetTags: renderStylesheetTags(stylesheetHrefs),
             islandClientPreamble: renderReactRefreshFallbackScript(),
             islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
-            request,
           })
 
           if (!html) {
@@ -477,9 +456,6 @@ async function writeStaticHtml(root: string, options: ResolvedSitexOptions) {
   )
   const cssAssetMap = createCssAssetMap(root, manifest)
 
-  const previousInternalRender = process.env.SITEX_INTERNAL_RENDER
-  process.env.SITEX_INTERNAL_RENDER = "1"
-
   const server = await createServer({
     configFile: path.join(root, "vite.config.ts"),
     server: { middlewareMode: true },
@@ -497,8 +473,6 @@ async function writeStaticHtml(root: string, options: ResolvedSitexOptions) {
     const routes = await getRoutes()
 
     for (const route of routes) {
-      if (route.render === "server") continue
-
       const html = await renderMatchedRoute(route, route.params)
 
       if (!html) {
@@ -528,12 +502,6 @@ async function writeStaticHtml(root: string, options: ResolvedSitexOptions) {
     }
   } finally {
     await server.close()
-
-    if (previousInternalRender === undefined) {
-      delete process.env.SITEX_INTERNAL_RENDER
-    } else {
-      process.env.SITEX_INTERNAL_RENDER = previousInternalRender
-    }
   }
 }
 
@@ -561,24 +529,6 @@ function collectStyleFilesSync(root: string) {
   return fg.sync("src/**/*.css", {
     cwd: root,
     onlyFiles: true,
-  })
-}
-
-function hasServerPagesSync(root: string) {
-  return collectServerRouteFilesSync(root).length > 0
-}
-
-function collectServerRouteFilesSync(root: string) {
-  const files = fg.sync("src/pages/**/*.tsx", {
-    cwd: root,
-    ignore: ["src/pages/examples/**"],
-    onlyFiles: true,
-  })
-
-  return files.filter((file) => {
-    const code = readFileSync(path.join(root, file), "utf8")
-
-    return /\bexport\s+const\s+render\s*=\s*["']server["']/.test(code)
   })
 }
 
@@ -1092,68 +1042,12 @@ async function createPagesTypesCode(pages: PageData[]) {
   ].join("\n")
 }
 
-function createVirtualRenderCode(root: string) {
-  const serverRouteFiles = collectServerRouteFilesSync(root).map(
-    (file) => `/${file}`
-  )
-
+function createVirtualRenderCode() {
   return [
     `import { prerender } from "react-dom/static"`,
-    `import { renderToString } from "react-dom/server"`,
     `import { getRoutes } from ${JSON.stringify(virtualRoutesId)}`,
     `import { createPageContext, matchRoute, readPageRoutes } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
     `export { getRoutes }`,
-    `const serverRouteModules = import.meta.glob(["/src/pages/**/*.tsx", "/src/pages/**/*.mdx"])`,
-    `const serverRouteFiles = ${JSON.stringify(serverRouteFiles)}`,
-    `function isRouteFile(file) {`,
-    `  return !file.includes("/src/pages/examples/")`,
-    `}`,
-    `function normalizeRoutePath(path) {`,
-    `  if (!path || path === "/") return "/"`,
-    `  return "/" + path.replace(/^\\/+|\\/+$/g, "")`,
-    `}`,
-    `function routeFileToPattern(file) {`,
-    `  const route = file.replace(/^\\/+/, "").replace(/^src\\/pages/, "").replace(/\\/index\\.(tsx|mdx)$/, "/").replace(/\\.(tsx|mdx)$/, "")`,
-    `  return normalizeRoutePath(route || "/")`,
-    `}`,
-    `function routeScore(path) {`,
-    `  return normalizeRoutePath(path).split("/").reduce((score, segment) => score + (!segment ? 0 : segment.startsWith("[") ? 1 : 10), 0)`,
-    `}`,
-    `function matchPathPattern(pattern, path) {`,
-    `  const patternSegments = normalizeRoutePath(pattern).split("/")`,
-    `  const pathSegments = normalizeRoutePath(path).split("/")`,
-    `  if (patternSegments.length !== pathSegments.length) return undefined`,
-    `  const params = {}`,
-    `  for (let index = 0; index < patternSegments.length; index++) {`,
-    `    const patternSegment = patternSegments[index]`,
-    `    const pathSegment = pathSegments[index]`,
-    `    const paramMatch = patternSegment.match(/^\\[([^\\]]+)\\]$/)`,
-    `    if (paramMatch) {`,
-    `      params[paramMatch[1]] = decodeURIComponent(pathSegment)`,
-    `      continue`,
-    `    }`,
-    `    if (patternSegment !== pathSegment) return undefined`,
-    `  }`,
-    `  return params`,
-    `}`,
-    `async function matchServerRoute(path) {`,
-    `  const candidates = []`,
-    `  for (const file of serverRouteFiles) {`,
-    `    if (!isRouteFile(file)) continue`,
-    `    const pattern = routeFileToPattern(file)`,
-    `    const params = matchPathPattern(pattern, path)`,
-    `    if (params) candidates.push({ file, params, pattern, score: routeScore(pattern) })`,
-    `  }`,
-    `  candidates.sort((a, b) => b.score - a.score || a.pattern.localeCompare(b.pattern))`,
-    `  const candidate = candidates[0]`,
-    `  if (!candidate) return undefined`,
-    `  const routeFile = candidate.file.replace(/^\\/+/, "")`,
-    `  const loadRoute = serverRouteModules[candidate.file]`,
-    `  if (!loadRoute) return undefined`,
-    `  const routes = await readPageRoutes(await loadRoute(), routeFile)`,
-    `  const match = matchRoute(routes, path)`,
-    `  return match ? { params: { ...candidate.params, ...match.params }, route: match.route } : undefined`,
-    `}`,
     `function replaceLast(value, search, replacement) {`,
     `  const index = value.lastIndexOf(search)`,
     `  if (index === -1) return value`,
@@ -1183,15 +1077,9 @@ function createVirtualRenderCode(root: string) {
     `  return { html, params, route }`,
     `}`,
     `async function renderRouteHtml(route, params, options = {}) {`,
-    `  const request = route.render === "server" ? options.request : undefined`,
-    `  const context = createPageContext(route, params, request)`,
+    `  const context = createPageContext(route, params)`,
     `  const node = await route.layout(context)`,
-    `  let body`,
-    `  if (route.render === "server") {`,
-    `    body = renderToString(node)`,
-    `  } else {`,
-    `    body = await new Response((await prerender(node)).prelude).text()`,
-    `  }`,
+    `  const body = await new Response((await prerender(node)).prelude).text()`,
     `  const html = /^\\s*<!doctype\\s/i.test(body) ? body : "<!doctype html>" + body`,
     `  return injectRouteHtmlAssets(html, options)`,
     `}`,
@@ -1205,40 +1093,7 @@ function createVirtualRenderCode(root: string) {
     `export async function renderMatchedRoute(route, params, options = {}) {`,
     `  return renderRouteHtml(route, params, options)`,
     `}`,
-    `export async function renderServerResponse(request, options = {}) {`,
-    `  const url = new URL(request.url)`,
-    `  const match = await matchServerRoute(url.pathname)`,
-    `  if (!match) return undefined`,
-    `  const html = await renderRouteHtml(match.route, match.params, { ...options, request })`,
-    `  return new Response(html, { headers: { "content-type": "text/html; charset=utf-8" } })`,
-    `}`,
   ].join("\n")
-}
-
-function createWebRequest(req: Connect.IncomingMessage) {
-  const protocolHeader = req.headers["x-forwarded-proto"]
-  const protocol = Array.isArray(protocolHeader)
-    ? (protocolHeader[0] ?? "http")
-    : (protocolHeader ?? "http")
-  const host = req.headers.host ?? "localhost"
-  const url = new URL(req.url ?? "/", `${protocol}://${host}`)
-  const headers = new Headers()
-
-  for (const [key, value] of Object.entries(req.headers)) {
-    if (value === undefined) continue
-
-    if (Array.isArray(value)) {
-      for (const item of value) headers.append(key, item)
-      continue
-    }
-
-    headers.set(key, value)
-  }
-
-  return new Request(url, {
-    headers,
-    method: req.method,
-  })
 }
 
 function routePathToHtmlFile(
@@ -1388,10 +1243,7 @@ function routePathToPublicPath(path: string, trailingSlash: boolean) {
 }
 
 async function findBuildPublicRoot(root: string) {
-  for (const publicRoot of [
-    path.join(root, "dist"),
-    path.join(root, ".output/public"),
-  ]) {
+  for (const publicRoot of [path.join(root, "dist")]) {
     try {
       await access(path.join(publicRoot, ".vite/manifest.json"))
       return publicRoot

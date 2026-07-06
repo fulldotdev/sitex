@@ -9,7 +9,6 @@ export type JsonValue =
   | { [key: string]: JsonValue }
 
 export type RouteParams = Record<string, string>
-export type RouteRenderMode = "static" | "server"
 
 export type StaticPath<Props = JsonValue> = {
   params: RouteParams
@@ -23,7 +22,6 @@ export type StaticPaths<Props = JsonValue> =
 export type PageContext<Props = unknown> = {
   params: RouteParams
   props: Props
-  request?: Request
   url: URL
 }
 
@@ -51,7 +49,6 @@ export type Route<Props = unknown> = {
   params: RouteParams
   path: string
   props: Props
-  render: RouteRenderMode
   score: number
 }
 
@@ -77,32 +74,14 @@ export async function readPageRoutes(
     throw new Error(`Page module "${file}" must default export a component.`)
   }
 
-  if (pageModule.render !== undefined && pageModule.render !== "server") {
-    const renderMode = JSON.stringify(pageModule.render)
-
+  if (pageModule.render !== undefined) {
     throw new Error(
-      `Page module "${file}" has unsupported render mode ${renderMode}. Only "server" is supported.`
+      `Page module "${file}" exports render, but Sitex routes are static. Remove the render export.`
     )
   }
 
-  const render: RouteRenderMode =
-    pageModule.render === "server" ? "server" : "static"
   const pattern = pageFileToRoutePattern(file)
   const paramNames = readParamNames(pattern)
-
-  if (render === "server") {
-    return [
-      createRoute({
-        file,
-        layout: component as PageLayout,
-        paramNames,
-        params: {},
-        path: pattern,
-        props: undefined as unknown,
-        render,
-      }),
-    ]
-  }
 
   if (paramNames.length === 0) {
     if (pageModule.paths !== undefined) {
@@ -119,15 +98,12 @@ export async function readPageRoutes(
         params: {},
         path: pattern,
         props: undefined as unknown,
-        render,
       }),
     ]
   }
 
   if (pageModule.paths === undefined) {
-    throw new Error(
-      `Dynamic static page module "${file}" must export paths or render = "server".`
-    )
+    throw new Error(`Dynamic page module "${file}" must export paths.`)
   }
 
   const paths =
@@ -149,7 +125,6 @@ export async function readPageRoutes(
       params: path.params,
       path: fillRoutePattern(pattern, path.params),
       props: path.props as unknown,
-      render,
     })
   })
 }
@@ -175,17 +150,13 @@ export function matchRoute(
 
 export function createPageContext<Props>(
   route: Route<Props>,
-  params: RouteParams,
-  request?: Request
+  params: RouteParams
 ): PageContext<Props> {
-  const url = request
-    ? new URL(request.url)
-    : new URL(route.path, "https://sitex.local")
+  const url = new URL(route.path, "https://sitex.local")
 
   return {
     params,
     props: route.props,
-    request,
     url,
   }
 }

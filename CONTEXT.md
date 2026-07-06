@@ -5,8 +5,8 @@ Sitex is an experimental framework for building static sites from React route mo
 ## Language
 
 **Static route**:
-A URL that Sitex can render to static HTML ahead of serving a request. A static route may be authored directly as a local route file today, and may later be generated from data without becoming an SSR route.
-_Avoid_: SSR route, request route
+A URL that Sitex renders to static HTML during build. A static route may be authored directly as a local route file today, and may later be generated from data.
+_Avoid_: request route
 
 **Local route**:
 A static route represented by one concrete route file in the app. This is the current v0 routing target because it keeps routing explicit and simple.
@@ -22,7 +22,7 @@ _Avoid_: route, entry
 
 **Generated static route**:
 A static route produced from one route module plus one or more data entries. This is a possible future routing shape for external or local data sources, but not the current v0 default.
-_Avoid_: dynamic route, SSR route
+_Avoid_: dynamic route
 
 **Generated static route module**:
 A future route module that explicitly exports `definePages(...)` to produce multiple static routes. Generated static route modules should be signaled by their API shape, not by catch-all filename syntax.
@@ -117,24 +117,16 @@ The imported React component that carries a `client:*` directive. An island root
 _Avoid_: intrinsic island, inline island
 
 **Rendering mode**:
-The way Sitex decides where a page or component is rendered. Current page modes are static by default and explicit request-time rendering with `export const render = "server"`. Current island modes are static plus client rendering with `client:load`, `client:visible`, `client:idle`, or `client:media`, and browser-only rendering with `client:only`.
+The way Sitex decides where a component is rendered. Pages are static. Island modes are static plus client rendering with `client:load`, `client:visible`, `client:idle`, or `client:media`, and browser-only rendering with `client:only`.
 _Avoid_: hydration mode
 
 **Static rendering**:
 The default rendering mode. Static rendering produces HTML ahead of serving requests and does not attach browser interactivity.
-_Avoid_: server rendering
+_Avoid_: hydration
 
 **Client rendering**:
 Browser rendering used for interactivity. `client:load`, `client:visible`, `client:idle`, and `client:media` combine static rendering with client rendering, while `client:only` uses client rendering only.
 _Avoid_: hydration
-
-**Server rendering**:
-Request-time page rendering on a server. Sitex supports this only through explicit route opt-in with `export const render = "server"`.
-_Avoid_: static rendering
-
-**Server directive**:
-A possible future directive for request-time server rendering behavior. Server directives are reserved conceptually but are not part of the current Sitex API.
-_Avoid_: current API
 
 **Client-loaded island**:
 An island marked with `client:load`. A client-loaded island is statically rendered first and then client-rendered for interactivity.
@@ -183,7 +175,7 @@ _Avoid_: complete framework
 ## Flagged Ambiguities
 
 **Hydration naming**:
-The code currently uses `hydration` names for the island runtime, but the preferred product language is rendering modes: static rendering, client rendering, and future server rendering. Do not change the code during the grilling session; revisit this in the later cleanup/refactor.
+The code currently uses `hydration` names for the island runtime, but the preferred product language is rendering modes: static rendering and client rendering. Do not change the code during the grilling session; revisit this in the later cleanup/refactor.
 
 **Document helpers**:
 The current `HeadContent` and `Scripts` helpers leak build asset concerns into the app-owned document shell. Cleanup should remove them and replace them with framework-owned build asset injection.
@@ -202,10 +194,6 @@ A set of interactive components that need shared React state or context. A share
 _Avoid_: `children:include`
 
 ## Example Dialogue
-
-Developer: "Should this service page be a server route?"
-
-Domain expert: "No. It should be a static route unless it actually needs request-time data."
 
 Developer: "Where do page metadata and scripts belong?"
 

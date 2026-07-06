@@ -22,7 +22,6 @@ const docsNavigationGroups = [
       { href: "/docs", label: "Introduction" },
       { href: "/docs/installation", label: "Installation" },
       { href: "/docs/folder-structure", label: "Folder structure" },
-      { href: "/docs/deployment", label: "Deployment" },
     ],
   },
   {

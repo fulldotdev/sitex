@@ -22,5 +22,5 @@ pnpm ready
 
 - Keep the public API small: the Vite plugin, TypeScript config, and client directives.
 - Prefer static routes and explicit TSX files.
-- Do not add SSR, generated routes, content collections, or new client directives without first documenting the decision.
+- Document the decision before adding generated routes, content collections, rendering modes, or new client directives.
 - Preserve the reference app as a simple content-site example.
