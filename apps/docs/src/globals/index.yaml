@@ -14,36 +14,18 @@ sidebar:
     - label: Framework
       href: /docs
       navigation:
-        - label: Start
+        - label: Docs
           links:
             - href: /docs
               label: Introduction
-            - href: /docs/installation
-              label: Installation
-            - href: /docs/folder-structure
-              label: Folder structure
-        - label: Pages
-          links:
             - href: /docs/pages
               label: Pages
-            - href: /docs/layouts
-              label: Layouts
-            - href: /docs/seo
-              label: SEO and head
-            - href: /docs/content
-              label: Pages API
-            - href: /docs/rendering-and-assets
-              label: Page rendering
-        - label: Components
-          links:
-            - href: /docs/island-rendering
-              label: Component rendering
-            - href: /docs/mdx-components
-              label: MDX components
+            - href: /docs/rendering
+              label: Rendering
     - label: UI
       href: /docs/ui
       navigation:
-        - label: Start
+        - label: Docs
           links:
             - href: /docs/ui
               label: Introduction

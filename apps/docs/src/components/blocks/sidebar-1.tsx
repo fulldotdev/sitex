@@ -4,6 +4,7 @@ import { type ReactNode } from "react"
 
 import { ExternalLinkIcon } from "lucide-react"
 
+import { ModeToggle } from "@/components/mode-toggle"
 import { ThemeProvider } from "@/components/theme-provider"
 import { Button } from "@/components/ui/button"
 import { Header, HeaderContainer, HeaderGroup } from "@/components/ui/header"
@@ -22,7 +23,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { cn } from "@/lib/utils"
 
 type NavigationGroup = {
@@ -170,7 +170,7 @@ function Sidebar1({
                   <ExternalLinkIcon />
                   <span className="hidden sm:inline">GitHub</span>
                 </Button>
-                <ThemeToggle />
+                <ModeToggle />
               </HeaderGroup>
             </HeaderContainer>
           </Header>

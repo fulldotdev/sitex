@@ -1,10 +1,9 @@
-import type React from "react"
 import { createContext, useContext, useEffect, useState } from "react"
 
 type Theme = "dark" | "light" | "system"
 
 type ThemeProviderProps = {
-  children?: React.ReactNode
+  children: React.ReactNode
   defaultTheme?: Theme
   storageKey?: string
 }
@@ -21,22 +20,6 @@ const initialState: ThemeProviderState = {
 
 const ThemeProviderContext = createContext<ThemeProviderState>(initialState)
 
-function disableTransitionsTemporarily() {
-  const style = document.createElement("style")
-  style.appendChild(
-    document.createTextNode("*,*::before,*::after{transition:none!important}")
-  )
-  document.head.appendChild(style)
-
-  window.getComputedStyle(document.body)
-
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      style.remove()
-    })
-  })
-}
-
 export function ThemeProvider({
   children,
   defaultTheme = "system",
@@ -44,6 +27,8 @@ export function ThemeProvider({
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(() =>
+    // Pages prerender without a window; the head script applies the class
+    // before first paint.
     typeof window === "undefined"
       ? defaultTheme
       : (localStorage.getItem(storageKey) as Theme) || defaultTheme
@@ -52,7 +37,6 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement
 
-    disableTransitionsTemporarily()
     root.classList.remove("light", "dark")
 
     if (theme === "system") {
@@ -71,10 +55,7 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      if (typeof window !== "undefined") {
-        localStorage.setItem(storageKey, theme)
-      }
-
+      localStorage.setItem(storageKey, theme)
       setTheme(theme)
     },
   }

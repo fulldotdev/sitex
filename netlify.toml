@@ -20,3 +20,43 @@ status = 301
 from = "/docs/page-routing"
 to = "/docs/pages"
 status = 301
+
+[[redirects]]
+from = "/docs/installation"
+to = "/docs"
+status = 301
+
+[[redirects]]
+from = "/docs/folder-structure"
+to = "/docs"
+status = 301
+
+[[redirects]]
+from = "/docs/layouts"
+to = "/docs/pages"
+status = 301
+
+[[redirects]]
+from = "/docs/content"
+to = "/docs/pages"
+status = 301
+
+[[redirects]]
+from = "/docs/mdx-components"
+to = "/docs/pages"
+status = 301
+
+[[redirects]]
+from = "/docs/seo"
+to = "/docs/rendering"
+status = 301
+
+[[redirects]]
+from = "/docs/rendering-and-assets"
+to = "/docs/rendering"
+status = 301
+
+[[redirects]]
+from = "/docs/island-rendering"
+to = "/docs/rendering"
+status = 301

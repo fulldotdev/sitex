@@ -32,7 +32,15 @@ export default function BaseLayout({
 }: BaseLayoutProps) {
   return (
     <Layout>
-      <LayoutHead {...head} name={globals.name} />
+      <LayoutHead {...head} name={globals.name}>
+        {/* Apply the stored theme before first paint to avoid a flash. Must
+            mirror the ThemeProvider defaults in blocks/sidebar-1.tsx. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem("vite-ui-theme")||"dark";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.add(d?"dark":"light")}catch(e){}})()`,
+          }}
+        />
+      </LayoutHead>
       <LayoutBody>
         <Sidebar1
           logo={globals.logo}
