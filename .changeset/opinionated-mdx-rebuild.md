@@ -20,6 +20,7 @@ Breaking changes:
 
 New:
 
+- Link prefetching is on by default: speculation rules let supporting browsers prerender on hover, with a small hover-prefetch fallback module for others. Opt out with `prefetch: false` or `data-no-prefetch`.
 - `vp build` writes `sitemap.xml` (respects `index: false` and `canonical` overrides, `lastmod` from `updatedAt`/`publishedAt`) and a default `robots.txt` when the app ships none.
 - Path-alias imports (like `@/components/alert`) now resolve inside MDX pages on newer Vite resolvers.
 - Frontmatter validation errors are targeted per field, and MDX pages are typechecked against their layout props via `.sitex/typecheck`.

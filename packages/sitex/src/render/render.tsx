@@ -25,6 +25,7 @@ export type RenderConfig = {
   defaultLocale: string
   faviconHref?: string
   locales: readonly string[]
+  prefetch: boolean
   siteUrl: string
   trailingSlash: boolean
 }
@@ -32,6 +33,7 @@ export type RenderConfig = {
 export type RenderAssets = {
   islandClientPreamble?: string
   islandClientSrc?: string
+  prefetchClientSrc?: string
   stylesheetHrefs?: readonly string[]
 }
 
@@ -61,8 +63,66 @@ export async function renderRoute(
 
   injectStylesheets(htmlDocument, assets)
   injectIslandClient(htmlDocument, hasIslands, assets)
+  injectPrefetch(htmlDocument, config, assets)
 
   return serializeHtmlDocument(htmlDocument)
+}
+
+const speculationRules = JSON.stringify({
+  prefetch: [
+    {
+      where: {
+        and: [
+          { href_matches: "/*" },
+          {
+            not: {
+              selector_matches: "[data-no-prefetch], [data-no-prefetch] a",
+            },
+          },
+        ],
+      },
+      eagerness: "moderate",
+    },
+  ],
+  prerender: [
+    {
+      where: {
+        and: [
+          { href_matches: "/*" },
+          {
+            not: {
+              selector_matches: "[data-no-prefetch], [data-no-prefetch] a",
+            },
+          },
+        ],
+      },
+      eagerness: "moderate",
+    },
+  ],
+})
+
+/**
+ * Browsers with the Speculation Rules API prerender links on hover natively;
+ * the prefetch client module covers the rest with hover prefetching.
+ */
+function injectPrefetch(
+  htmlDocument: HtmlDocument,
+  config: RenderConfig,
+  assets: RenderAssets
+) {
+  if (!config.prefetch) return
+
+  appendHtmlFragment(
+    htmlDocument.head,
+    `<script type="speculationrules">${speculationRules}</script>`
+  )
+
+  if (!assets.prefetchClientSrc) return
+
+  appendHtmlFragment(
+    htmlDocument.body,
+    `<script src="${escapeHtmlAttribute(assets.prefetchClientSrc)}" type="module"></script>`
+  )
 }
 
 /**

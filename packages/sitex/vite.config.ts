@@ -7,6 +7,7 @@ export default defineConfig({
       "vite/plugin": "src/vite/plugin.ts",
       "hydration/client": "src/hydration/client.tsx",
       "hydration/server": "src/hydration/server.tsx",
+      "prefetch/client": "src/prefetch/client.ts",
       "render/render": "src/render/render.tsx",
       "router/runtime": "src/router/runtime.ts",
     },

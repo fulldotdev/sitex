@@ -27,3 +27,7 @@ export default function Header() {
 ## Boundaries
 
 Island props must be JSON-serializable — functions, symbols, React elements, and cyclic values throw at build time. Children pass through as static HTML; a nested `client:*` component inside them becomes its own independent island. Components that share client state belong inside one island root.
+
+## Prefetch
+
+Navigation is prefetched by default: Sitex injects speculation rules so supporting browsers prerender links on hover (instant navigation), plus a small hover-prefetch script for the rest. Disable it with `sitex({ prefetch: false })`, or per link tree with a `data-no-prefetch` attribute.

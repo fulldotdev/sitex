@@ -62,6 +62,7 @@ import {
 const packageRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const packageSourceExtension = path.extname(fileURLToPath(import.meta.url))
 const islandClientInput = normalizePath(packageFile("hydration/client", "tsx"))
+const prefetchClientInput = normalizePath(packageFile("prefetch/client", "ts"))
 const virtualRoutesId = "virtual:sitex-routes"
 const resolvedVirtualRoutesId = `\0${virtualRoutesId}`
 const virtualPagesId = "sitex:pages"
@@ -77,6 +78,7 @@ type RenderModule = typeof import("../render/render.tsx")
 
 export type SitexOptions = {
   site?: SiteConfig
+  prefetch?: boolean
   favicon?:
     | false
     | {
@@ -100,6 +102,7 @@ type ResolvedSitexOptions = {
       }
   site: ResolvedSiteConfig
   locales: string[]
+  prefetch: boolean
   mdx: {
     components: Record<string, string>
   }
@@ -119,6 +122,7 @@ export function sitex(options: SitexOptions = {}): PluginOption[] {
     favicon: resolveFaviconOptions(options.favicon),
     site: resolveSiteConfig(options.site),
     locales: [],
+    prefetch: options.prefetch !== false,
     mdx: {
       components: validateMdxComponentImports(options.mdx?.components),
     },
@@ -227,7 +231,7 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
           client: {
             build: {
               rollupOptions: {
-                input: createBuildInput(configRoot),
+                input: createBuildInput(configRoot, options.prefetch),
               },
             },
           },
@@ -414,7 +418,7 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
 
           const html = await render.renderRoute(
             route,
-            createRenderConfig(options),
+            { ...createRenderConfig(options), prefetch: false },
             () => ({
               islandClientPreamble: renderReactRefreshFallbackScript(),
               islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
@@ -526,11 +530,13 @@ function createJavaScriptModule(code: string) {
   }
 }
 
-function createBuildInput(root: string) {
+function createBuildInput(root: string, prefetch: boolean) {
   const clientEntries = writeClientBuildEntriesSync(root)
   const input: Record<string, string> = {
     islandClient: clientEntries.islandClient,
   }
+
+  if (prefetch) input.prefetchClient = clientEntries.prefetchClient
 
   for (const [file, entry] of clientEntries.styles) {
     const name = file.replace(/^src\//, "").replace(/\.css$/, "")
@@ -551,6 +557,12 @@ function writeClientBuildEntriesSync(root: string) {
   const islandClient = path.join(clientRoot, "island-client.ts")
   writeFileSync(islandClient, `import ${JSON.stringify(islandClientInput)}\n`)
 
+  const prefetchClient = path.join(clientRoot, "prefetch-client.ts")
+  writeFileSync(
+    prefetchClient,
+    `import ${JSON.stringify(prefetchClientInput)}\n`
+  )
+
   for (const file of collectStyleFilesSync(root)) {
     const entry = path.join(
       clientRoot,
@@ -562,7 +574,7 @@ function writeClientBuildEntriesSync(root: string) {
     styles.set(file, entry)
   }
 
-  return { islandClient, styles }
+  return { islandClient, prefetchClient, styles }
 }
 
 function createStyleEntryCode(root: string, file: string) {
@@ -606,6 +618,7 @@ function createRenderConfig(options: ResolvedSitexOptions): RenderConfig {
     defaultLocale: options.site.locale,
     faviconHref: options.favicon === false ? undefined : "/favicon.svg",
     locales: options.locales,
+    prefetch: options.prefetch,
     siteUrl: options.site.url,
     trailingSlash: options.trailingSlash,
   }
@@ -620,6 +633,9 @@ async function writeStaticHtml(
   const manifest = await readManifest(publicRoot)
   const islandClientAsset = Object.values(manifest).find(
     (entry) => entry.name === "islandClient"
+  )
+  const prefetchClientAsset = Object.values(manifest).find(
+    (entry) => entry.name === "prefetchClient"
   )
   const cssAssetMap = createCssAssetMap(root, manifest)
   const renderFile = path.join(root, ssrBuildDir, "render.mjs")
@@ -647,6 +663,9 @@ async function writeStaticHtml(
             hasIslands && islandClientAsset?.file
               ? publicAssetPath(islandClientAsset.file)
               : undefined,
+          prefetchClientSrc: prefetchClientAsset?.file
+            ? publicAssetPath(prefetchClientAsset.file)
+            : undefined,
           stylesheetHrefs,
         }
       }
