@@ -1,0 +1,38 @@
+---
+layout: "doc"
+title: "Banner"
+description: "Dismissable site-wide announcement banner."
+---
+
+A site-wide announcement bar with an optional close button and session-based dismissal. Use it for launch notices, promos, or maintenance messages at the top of a layout.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/banner.json
+```
+
+## Usage
+
+```tsx
+import { Banner, BannerContainer } from "@/components/ui/banner"
+
+export function SiteBanner() {
+  return (
+    <Banner variant="floating" storageKey="v0-3-release">
+      <BannerContainer>
+        <p>SiteX 0.3 is out — read the release notes.</p>
+      </BannerContainer>
+    </Banner>
+  )
+}
+```
+
+Key parts:
+
+1. `Banner` renders an `aside` with two variants: `default` (full-width, inverted colors) and `floating` (rounded, bordered, centered).
+2. `storageKey` makes dismissal persist for the session: closing stores a flag in `sessionStorage` and the banner stays hidden on later renders.
+3. `BannerContainer` centers the content and renders the close button; pass `showClose={false}` to hide it, or `onClose` to intercept the click (call `event.preventDefault()` to keep the banner open).
+4. `bannerVariants` is exported for reusing the variant classes elsewhere.
+
+The dismiss behavior and `sessionStorage` check are client-side, so hydrate the banner as an island with a Sitex client directive where you use it in a layout or block, e.g. `<Banner client:load>`.

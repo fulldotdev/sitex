@@ -1,0 +1,58 @@
+---
+layout: "doc"
+title: "Layout"
+description: "Document primitives for Sitex layouts: html, head with SEO meta and JSON-LD, body, and main."
+---
+
+Document primitives for building Sitex layouts: `Layout` renders the `html` element, `LayoutHead` the `head` with SEO meta tags and JSON-LD, plus `LayoutBody` and `LayoutMain` for the page shell.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/layout.json
+```
+
+## Usage
+
+```tsx
+import {
+  Layout,
+  LayoutBody,
+  LayoutHead,
+  LayoutMain,
+} from "@/components/ui/layout"
+
+export default function BaseLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  return (
+    <Layout lang="en">
+      <LayoutHead
+        name="Acme"
+        title="Acme — Build sites fast"
+        description="Static sites with React and MDX."
+        image={{ src: "/og.png", alt: "Acme", width: 1200, height: 630 }}
+        twitterCard="summary_large_image"
+        jsonLd={{
+          "@context": "https://schema.org",
+          "@type": "WebSite",
+          name: "Acme",
+        }}
+      />
+      <LayoutBody>
+        <LayoutMain>{children}</LayoutMain>
+      </LayoutBody>
+    </Layout>
+  )
+}
+```
+
+Key details:
+
+1. `Layout`, `LayoutBody`, and `LayoutMain` are thin wrappers over `html`, `body`, and `main` with base styling; all standard element props pass through.
+2. `LayoutHead` turns props into meta tags: `title`, `description`, `name` (as `og:site_name`), `image` (string or object with `src`, `alt`, `width`, `height`, `type`), `openGraphType` (alias `type`), and `twitterCard` (`summary` or `summary_large_image`).
+3. For `openGraphType="article"`, `publishedAt` and `updatedAt` emit `article:published_time` and `article:modified_time`.
+4. `jsonLd` accepts a single `schema-dts` object (`Graph` or `WithContext<Thing>`) or an array, serialized into a `script type="application/ld+json"` tag.
+5. Children of `LayoutHead` render after the generated tags, so you can add extra `link` or `meta` elements. `LayoutHeadProps` and `LayoutJsonLd` types are exported.

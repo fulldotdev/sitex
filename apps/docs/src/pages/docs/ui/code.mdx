@@ -1,0 +1,43 @@
+---
+layout: "doc"
+title: "Code"
+description: "Code block with shiki syntax highlighting and a copy button; drop-in MDX pre replacement."
+---
+
+A syntax-highlighted code block powered by shiki, with light/dark themes and a copy button. It is designed as the `pre` replacement for MDX code fences, and also works standalone.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/code.json
+```
+
+## Usage
+
+Wire it up as the MDX `pre` component in `vite.config.ts`:
+
+```ts
+import { sitex } from "sitex"
+
+export default defineConfig({
+  plugins: [sitex({ mdx: { components: { pre: "@/components/ui/code" } } })],
+})
+```
+
+Every fenced code block in your MDX pages now renders through this component. For direct use, import the named `Code` export:
+
+```tsx
+import { Code } from "@/components/ui/code"
+
+export function InstallSnippet() {
+  return <Code code="pnpm add sitex" lang="bash" />
+}
+```
+
+Key details:
+
+1. The default export is a drop-in `pre` replacement that reads the code text and `language-*` class from the MDX-generated `pre > code` element.
+2. The named `Code` export takes `code`, an optional `lang`, and `className`.
+3. Supported languages: `bash`, `css`, `html`, `json`, `markdown`, `mdx`, `ts`, `tsx`, `yaml`; anything else falls back to plain `text`.
+4. Highlighting uses the github-light and github-dark themes and switches with your site's dark mode.
+5. The copy button (`code-copy-button.tsx`, installed with this item) carries its own `client:load` directive, so it hydrates as its own island automatically — no directive needed where you use `Code`.

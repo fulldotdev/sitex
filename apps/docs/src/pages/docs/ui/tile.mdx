@@ -1,0 +1,45 @@
+---
+layout: "doc"
+title: "Tile"
+description: "Card-like tile and tile group for feature grids."
+---
+
+A card-like tile with a responsive group wrapper for laying out feature grids, link collections, or image galleries. Tiles can render as links, and the group supports grid and masonry layouts.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/tile.json
+```
+
+## Usage
+
+```tsx
+import { Tile, TileContent, TileGroup } from "@/components/ui/tile"
+
+export function FeatureGrid() {
+  return (
+    <TileGroup size="sm">
+      <Tile variant="outline" href="/docs/pages">
+        <TileContent>
+          <h3>Pages</h3>
+          <p>File-based routing for MDX and TSX pages.</p>
+        </TileContent>
+      </Tile>
+      <Tile variant="muted">
+        <TileContent>
+          <h3>Layouts</h3>
+          <p>Shared wrappers with SEO baked in.</p>
+        </TileContent>
+      </Tile>
+    </TileGroup>
+  )
+}
+```
+
+Key parts:
+
+1. `Tile` has four variants: `default` (transparent border), `inset` (negative horizontal margin), `outline` (bordered), and `muted` (filled background). Passing `href` renders an `a` instead of a `div` and enables a hover state.
+2. `TileGroup` wraps tiles with `variant="default"` (auto-fit grid) or `variant="masonry"` (CSS columns), and `size` `sm`, `default`, or `lg` controlling the minimum column width (240px, 300px, or 400px).
+3. `TileContent` adds the inner padding and vertical flex layout for text content.
+4. `tileVariants` and `tileGroupVariants` are exported for reusing the variant classes elsewhere.

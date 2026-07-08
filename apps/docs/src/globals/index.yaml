@@ -33,3 +33,33 @@ sidebar:
           links:
             - href: /docs/ui
               label: Introduction
+            - href: /docs/ui/installation
+              label: Installation
+        - label: Components
+          links:
+            - href: /docs/ui/banner
+              label: Banner
+            - href: /docs/ui/code
+              label: Code
+            - href: /docs/ui/gradient
+              label: Gradient
+            - href: /docs/ui/header
+              label: Header
+            - href: /docs/ui/layout
+              label: Layout
+            - href: /docs/ui/marquee
+              label: Marquee
+            - href: /docs/ui/price
+              label: Price
+            - href: /docs/ui/rating
+              label: Rating
+            - href: /docs/ui/section
+              label: Section
+            - href: /docs/ui/theme-toggle
+              label: Theme Toggle
+            - href: /docs/ui/tile
+              label: Tile
+            - href: /docs/ui/toc
+              label: Table of Contents
+            - href: /docs/ui/typography
+              label: Typography

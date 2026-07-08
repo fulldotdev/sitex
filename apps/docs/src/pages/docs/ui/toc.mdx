@@ -1,0 +1,52 @@
+---
+layout: "doc"
+title: "Table of Contents"
+description: "Table of contents navigation for page headings."
+---
+
+A table of contents navigation for the headings on the current page. Use it in a doc layout sidebar so readers can jump to any section.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/toc.json
+```
+
+## Usage
+
+Sitex passes the extracted MDX headings to layouts via the `headings` prop, so a doc layout can map them straight into the menu:
+
+```tsx
+import type { LayoutProps } from "@fulldotdev/sitex"
+
+import {
+  Toc,
+  TocMenu,
+  TocMenuItem,
+  TocMenuLink,
+  TocTitle,
+} from "@/components/ui/toc"
+
+export default function DocLayout({ headings }: LayoutProps) {
+  return (
+    <Toc>
+      <TocTitle>On this page</TocTitle>
+      <TocMenu>
+        {headings?.map((heading) => (
+          <TocMenuItem key={heading.href}>
+            <TocMenuLink href={heading.href} depth={heading.depth}>
+              {heading.label}
+            </TocMenuLink>
+          </TocMenuItem>
+        ))}
+      </TocMenu>
+    </Toc>
+  )
+}
+```
+
+Key parts:
+
+1. `Toc` renders the outer `nav`, `TocTitle` the heading (a `p` by default, changeable via `as`), and `TocMenu`/`TocMenuItem` the `ul`/`li` structure.
+2. `TocMenuLink` indents by `depth` (default `2`; `3` and deeper get increasing left padding), matching the `depth` of each Sitex heading.
+3. Pass `isActive` (or `active`) to `TocMenuLink` to highlight the current section; it sets `data-active` and `aria-current="location"`.

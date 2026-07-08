@@ -1,0 +1,40 @@
+---
+layout: "doc"
+title: "Gradient"
+description: "Decorative gradient surface for hero and section backgrounds."
+---
+
+An absolutely positioned, mask-based gradient overlay that fades the `primary` color out from an edge or the center. Use it inside a `relative` container to give heroes and sections a soft background glow.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/gradient.json
+```
+
+## Usage
+
+```tsx
+import { Gradient } from "@/components/ui/gradient"
+
+export function Hero() {
+  return (
+    <section className="relative overflow-hidden">
+      <Gradient variant="radial" direction="top" className="opacity-30" />
+      <div className="relative">
+        <h1>Build sites fast</h1>
+      </div>
+    </section>
+  )
+}
+```
+
+Key details:
+
+1. `variant` is `radial` (default) or `linear`, implemented with CSS mask images.
+2. `direction` sets the gradient origin: `left`, `right`, `top`, `bottom` (default), or `center`.
+3. The element fills its nearest positioned ancestor (`absolute inset-0`), is `pointer-events-none`, and is hidden from assistive tech with `aria-hidden`.
+4. It renders at 50% opacity with the `primary` background color; override both via `className`.
+5. `gradientVariants` is exported for reusing the variant classes elsewhere.
+
+The component is purely decorative and static, so it needs no client directive.

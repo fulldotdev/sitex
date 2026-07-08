@@ -1,0 +1,44 @@
+---
+layout: "doc"
+title: "Header"
+description: "Site header with container and grouping primitives."
+---
+
+Structural primitives for a site header: the header bar itself, a centered container, and groups for clustering navigation, logos, and actions.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/header.json
+```
+
+## Usage
+
+```tsx
+import { Header, HeaderContainer, HeaderGroup } from "@/components/ui/header"
+
+export function SiteHeader() {
+  return (
+    <Header variant="floating">
+      <HeaderContainer>
+        <HeaderGroup>
+          <a href="/">Acme</a>
+        </HeaderGroup>
+        <HeaderGroup className="ml-auto">
+          <a href="/docs">Docs</a>
+          <a href="/pricing">Pricing</a>
+        </HeaderGroup>
+      </HeaderContainer>
+    </Header>
+  )
+}
+```
+
+Key parts:
+
+1. `Header` renders a `header` element with two variants: `default` (plain full-width bar) and `floating` (rounded, bordered, centered card that respects the `--container` CSS variable).
+2. `HeaderContainer` centers content with a `max-w-7xl` container and horizontal padding.
+3. `HeaderGroup` is a flex row for clustering items; use `className="ml-auto"` to push a group to the far side.
+4. `headerVariants` is exported for reusing the variant classes elsewhere.
+
+All parts are static and render without a client directive; add one only if you place interactive islands inside.

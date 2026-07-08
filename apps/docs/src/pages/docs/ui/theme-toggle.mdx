@@ -1,0 +1,36 @@
+---
+layout: "doc"
+title: "Theme Toggle"
+description: "Light/dark theme provider and toggle button."
+---
+
+A theme provider that applies a `light` or `dark` class to the document root, plus a button that switches between the two. Use it to add a persistent light/dark mode switch to a layout header.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/theme-toggle.json
+```
+
+## Usage
+
+```tsx
+import { ThemeProvider, ThemeToggle } from "@/components/ui/theme-toggle"
+
+export function HeaderThemeToggle() {
+  return (
+    <ThemeProvider defaultTheme="system" storageKey="theme">
+      <ThemeToggle />
+    </ThemeProvider>
+  )
+}
+```
+
+Key parts:
+
+1. `ThemeProvider` holds the current theme in React state, writes it to `localStorage` under `storageKey` (default `"theme"`), and toggles the `light`/`dark` class on `document.documentElement`. `defaultTheme` accepts `"light"`, `"dark"`, or `"system"` (default), where `system` follows `prefers-color-scheme`.
+2. `ThemeToggle` renders an icon button (sun/moon) that flips between `light` and `dark` on click. It accepts all `button` props and sets `aria-pressed` and `data-state` based on the active theme.
+3. `useTheme` returns `{ theme, setTheme }` from the provider context for building custom controls.
+4. The `Theme` type (`"dark" | "light" | "system"`) is exported for typing your own code.
+
+Theme state lives entirely on the client, so hydrate the whole tree as an island with a Sitex client directive where you use it in a layout, e.g. `<HeaderThemeToggle client:load />`. The `ThemeToggle` must render inside the same island as its `ThemeProvider`, since the context does not cross island boundaries.
