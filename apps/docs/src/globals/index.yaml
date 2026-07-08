@@ -49,6 +49,6 @@ sidebar:
             - href: /docs/components/tile
               label: Tile
             - href: /docs/components/toc
-              label: Table of Contents
+              label: Toc
             - href: /docs/components/typography
               label: Typography

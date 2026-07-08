@@ -170,7 +170,7 @@
     {
       "name": "toc",
       "type": "registry:ui",
-      "title": "Table of Contents",
+      "title": "Toc",
       "description": "Table of contents navigation for page headings.",
       "registryDependencies": ["utils"],
       "files": [
