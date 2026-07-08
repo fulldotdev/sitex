@@ -18,10 +18,14 @@ sidebar:
           links:
             - href: /docs
               label: Introduction
+            - href: /docs/installation
+              label: Installation
             - href: /docs/pages
               label: Pages
-            - href: /docs/rendering
-              label: Rendering
+            - href: /docs/layouts
+              label: Layouts
+            - href: /docs/components
+              label: Components
     - label: UI
       href: /docs/ui
       navigation:

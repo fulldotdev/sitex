@@ -1,0 +1,86 @@
+---
+layout: "doc"
+title: "Layouts"
+description: "TSX layouts with typed props, globals, head defaults, and MDX components."
+---
+
+A layout is a TSX file in `src/layouts` that renders the full document — `<html>`, `<head>`, and `<body>`. A page selects it with the `layout` frontmatter field: `layout: "doc"` renders with `src/layouts/doc.tsx`.
+
+## Props
+
+A layout receives one props object: the page frontmatter plus Sitex-provided `path`, `url`, `locale`, `headings`, and `children`. Type extra frontmatter with `LayoutProps<T>`:
+
+```tsx
+import type { LayoutProps } from "@fulldotdev/sitex"
+
+type PostData = { badge?: string }
+
+export default function PostLayout({
+  title,
+  badge,
+  headings,
+  children,
+}: LayoutProps<PostData>) {
+  return (
+    <html>
+      <head>
+        <title>{title}</title>
+      </head>
+      <body>
+        <nav>
+          {headings.map((h) => (
+            <a key={h.id} href={h.href}>
+              {h.label}
+            </a>
+          ))}
+        </nav>
+        <article>
+          <h1>{title}</h1>
+          {badge && <span>{badge}</span>}
+          {children}
+        </article>
+      </body>
+    </html>
+  )
+}
+```
+
+Sitex writes one typecheck file per page to `.sitex/typecheck`, so `tsc` reports frontmatter that does not match the layout props.
+
+## Globals
+
+Shared chrome content — name, logo, navigation, footer links — lives in `src/globals/index.yaml` and is imported with `sitex:globals` (fully typed from the YAML):
+
+```tsx
+import globals from "sitex:globals"
+```
+
+`index.yaml` serves the root locale; its language tag comes from the `site.locale` plugin option (default `"en"`) and sets `<html lang>`. Files like `nl.yaml` define locale variants served under `/nl` routes, available via the `locales` export and the layout `locale` prop.
+
+## Head Defaults
+
+The layout owns the `<head>`. After rendering, Sitex adds only what is missing:
+
+1. canonical link and `og:url` from the site URL + the page path (`canonical` frontmatter overrides)
+2. `<html lang>` from the page locale
+3. charset and viewport
+4. robots `noindex` when the page sets `noindex: true`
+5. favicon link and generator meta
+
+For JSON-LD, render a `script type="application/ld+json"` anywhere in the layout — Sitex hoists it into the head. The `layout` component from [Sitex UI](/docs/ui) wires title, description, Open Graph, Twitter, and JSON-LD props for you.
+
+## MDX Components
+
+Override Markdown elements globally in the plugin config, or per layout with an `mdxComponents` export. Layout entries win. Use this for elements that need more than CSS — like code blocks with syntax highlighting and a copy button.
+
+```ts
+// vite.config.ts
+sitex({ mdx: { components: { pre: "@/components/mdx/pre" } } })
+```
+
+```tsx
+// src/layouts/doc.tsx
+import MdxPre from "@/components/mdx/pre"
+
+export const mdxComponents = { pre: MdxPre }
+```

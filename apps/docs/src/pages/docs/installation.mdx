@@ -1,0 +1,109 @@
+---
+layout: "doc"
+title: "Installation"
+description: "Install Sitex and create your first page."
+---
+
+## Install
+
+```bash
+pnpm add @fulldotdev/sitex react react-dom vite vite-plus @vitejs/plugin-react
+pnpm add -D typescript @types/react @types/react-dom
+```
+
+```ts
+// vite.config.ts
+import { defineConfig } from "vite-plus"
+import { sitex } from "@fulldotdev/sitex/plugin"
+import react from "@vitejs/plugin-react"
+
+export default defineConfig({
+  plugins: [react(), sitex()],
+})
+```
+
+```json
+// tsconfig.json
+{
+  "extends": "@fulldotdev/sitex/tsconfig"
+}
+```
+
+The Sitex tsconfig brings the includes, the generated `.sitex` types, and the `@/*` alias. Add `.sitex` to `.gitignore` — Sitex regenerates it on every run.
+
+Builds need an absolute site URL for canonical, sitemap, and robots output. Deploy platforms provide one automatically (Netlify `URL`, `VERCEL_PROJECT_PRODUCTION_URL`, `SITE_URL`, and similar); otherwise pass `sitex({ site: { url: "https://example.com" } })`.
+
+## Project Shape
+
+```text
+src/
+  components/        # blocks, UI primitives, islands (convention, not required)
+  globals/
+    index.yaml       # shared chrome content, imported via sitex:globals
+  layouts/           # TSX layouts, selected by the layout frontmatter field
+    default.tsx
+  pages/             # MDX pages only — every .mdx file is a route
+    index.mdx
+  index.css          # global stylesheet, imported by the base layout
+```
+
+## First Page
+
+Create these four files and the site runs:
+
+```css
+/* src/index.css */
+body {
+  font-family: system-ui, sans-serif;
+}
+```
+
+```yaml
+# src/globals/index.yaml
+name: My Site
+```
+
+```tsx
+// src/layouts/default.tsx
+import type { LayoutProps } from "@fulldotdev/sitex"
+import globals from "sitex:globals"
+
+import "@/index.css"
+
+export default function DefaultLayout({ title, children }: LayoutProps) {
+  return (
+    <html>
+      <head>
+        <title>{title}</title>
+      </head>
+      <body>
+        <header>{globals.name}</header>
+        <main>
+          <h1>{title}</h1>
+          {children}
+        </main>
+      </body>
+    </html>
+  )
+}
+```
+
+```mdx
+---
+layout: "default"
+title: "My Site"
+description: "My first Sitex page."
+---
+
+Hello from Sitex.
+```
+
+## Commands
+
+```bash
+vp dev      # dev server with the same rendering pipeline as the build
+vp build    # static build
+vp preview  # serve the built output
+```
+
+`vp build` writes to `dist/`: one HTML file per page (slashless URLs by default; `trailingSlash: true` for directory indexes), `sitemap.xml` (excludes `noindex` pages, `lastmod` from `updatedAt`/`publishedAt`), `robots.txt`, and a generated `/favicon.svg` (configure via the `favicon` plugin option, disable with `favicon: false`). Files in `public/` always win over generated ones. Deploy `dist/` to any static host.

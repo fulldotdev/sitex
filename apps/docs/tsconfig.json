@@ -1,12 +1,5 @@
 {
   "extends": "../../packages/sitex/src/config/tsconfig.json",
-  "include": [
-    "src/**/*",
-    ".sitex/**/*.d.ts",
-    ".sitex/typecheck/**/*.tsx",
-    "vite.config.ts"
-  ],
-  "exclude": ["dist"],
   "compilerOptions": {
     "paths": {
       "@fulldotdev/sitex": ["../../packages/sitex/src/index.ts"],

@@ -16,7 +16,7 @@ trusts in your workspace configuration.
 
 ## Vite+
 
-Sitex requires Vite+ with Vite 8 or newer. `site.url` is optional when your deploy platform provides a supported URL environment variable: `SITE_URL`, `PUBLIC_SITE_URL`, Netlify, Vercel, Cloudflare Pages, Render, Railway, or Koyeb URL/domain vars.
+Sitex requires Vite+ with Vite 8 or newer.
 
 ```ts
 import { defineConfig } from "vite-plus"
@@ -24,19 +24,11 @@ import { sitex } from "@fulldotdev/sitex/plugin"
 import react from "@vitejs/plugin-react"
 
 export default defineConfig({
-  plugins: [
-    react(),
-    sitex({
-      site: {
-        url: "https://example.com",
-      },
-      favicon: {
-        text: "EX",
-      },
-    }),
-  ],
+  plugins: [react(), sitex()],
 })
 ```
+
+Builds need an absolute site URL for canonical, sitemap, and robots output. Deploy platforms provide one automatically (`SITE_URL`, `PUBLIC_SITE_URL`, Netlify, Vercel, Cloudflare Pages, Render, Railway, or Koyeb URL/domain vars); otherwise pass `sitex({ site: { url: "https://example.com" } })`.
 
 Create `src/index.css` and import it from your app's base layout. Add Tailwind or any other CSS tooling in your app when you want it.
 
@@ -61,15 +53,11 @@ Import it from layouts with `sitex:globals`. Keep Vite `site` config for stable 
 
 ```json
 {
-  "extends": "@fulldotdev/sitex/tsconfig",
-  "include": [
-    "src/**/*",
-    ".sitex/**/*.d.ts",
-    ".sitex/typecheck/**/*.tsx",
-    "vite.config.ts"
-  ]
+  "extends": "@fulldotdev/sitex/tsconfig"
 }
 ```
+
+The shared config brings the includes, the generated `.sitex` types, and the `@/*` alias.
 
 ## First Page
 

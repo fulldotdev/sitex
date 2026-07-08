@@ -53,6 +53,7 @@ import {
   type Route,
 } from "../router/runtime.ts"
 import {
+  createMissingSiteUrlError,
   resolveSiteConfig,
   type ResolvedSiteConfig,
   type SiteConfig,
@@ -256,6 +257,13 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
       config = resolvedConfig
       root = resolvedConfig.root
       applyGlobalsLocales(root, options)
+
+      if (!options.site.url) {
+        if (resolvedConfig.command === "build")
+          throw createMissingSiteUrlError()
+
+        options.site.url = "http://localhost"
+      }
     },
 
     async buildStart() {

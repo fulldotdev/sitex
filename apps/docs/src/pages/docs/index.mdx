@@ -8,114 +8,12 @@ Sitex is an opinionated React framework for content sites. Pages are MDX documen
 
 The framework handles routing, asset loading, island scripts, head defaults, sitemap, robots.txt, and favicon. Everything else is plain React.
 
-## Install
+## The Model
 
-```bash
-pnpm add @fulldotdev/sitex react react-dom vite vite-plus @vitejs/plugin-react
-pnpm add -D typescript @types/react @types/react-dom
-```
+1. `src/pages/**/*.mdx` — routable content documents with typed frontmatter.
+2. `src/layouts/**/*.tsx` — the full document around a page, selected by the `layout` field.
+3. `src/components/**/*.tsx` — blocks, UI primitives, and islands.
 
-```ts
-// vite.config.ts
-import { defineConfig } from "vite-plus"
-import { sitex } from "@fulldotdev/sitex/plugin"
-import react from "@vitejs/plugin-react"
+The split is strict on purpose: because every route is a content document flowing through the same pipeline, metadata is always complete and pages stay simple enough that anyone — or any agent — can add one without touching React.
 
-export default defineConfig({
-  plugins: [react(), sitex({ site: { url: "https://example.com" } })],
-})
-```
-
-```json
-// tsconfig.json
-{
-  "extends": "@fulldotdev/sitex/tsconfig",
-  "include": [
-    "src/**/*",
-    ".sitex/**/*.d.ts",
-    ".sitex/typecheck/**/*.tsx",
-    "vite.config.ts"
-  ],
-  "exclude": ["dist"],
-  "compilerOptions": {
-    "paths": {
-      "@/*": ["./src/*"]
-    }
-  }
-}
-```
-
-Add `.sitex` to `.gitignore` — Sitex regenerates it on every run.
-
-## Project Shape
-
-```text
-src/
-  index.css          # global stylesheet, imported by the base layout
-  globals/
-    index.yaml       # shared chrome content, imported via sitex:globals
-  pages/             # MDX pages only — every .mdx file is a route
-    index.mdx
-  layouts/           # TSX layouts, selected by the layout frontmatter field
-    default.tsx
-  components/        # blocks, UI primitives, islands (convention, not required)
-```
-
-Create these four files and the site runs:
-
-```css
-/* src/index.css */
-body {
-  font-family: system-ui, sans-serif;
-}
-```
-
-```yaml
-# src/globals/index.yaml
-name: My Site
-```
-
-```tsx
-// src/layouts/default.tsx
-import type { LayoutProps } from "@fulldotdev/sitex"
-import globals from "sitex:globals"
-
-import "@/index.css"
-
-export default function DefaultLayout({ title, children }: LayoutProps) {
-  return (
-    <html>
-      <head>
-        <title>{title}</title>
-      </head>
-      <body>
-        <header>{globals.name}</header>
-        <main>
-          <h1>{title}</h1>
-          {children}
-        </main>
-      </body>
-    </html>
-  )
-}
-```
-
-```mdx
----
-layout: "default"
-title: "My Site"
-description: "My first Sitex page."
----
-
-Hello from Sitex.
-```
-
-## Commands
-
-```bash
-vp dev      # dev server with the same rendering pipeline as the build
-vp build    # one HTML file per page, plus sitemap.xml, robots.txt, favicon
-vp preview  # serve the built output
-```
-
-Deploy `dist/` to any static host. Continue with [Pages](/docs/pages) and [Rendering](/docs/rendering).
+Start with [Installation](/docs/installation).

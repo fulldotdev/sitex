@@ -1,0 +1,29 @@
+---
+layout: "doc"
+title: "Components"
+description: "Static rendering by default, browser interactivity with client directives."
+---
+
+Components are plain React. Everything renders to static HTML at build time, and Sitex follows each page's module graph to include exactly the CSS that page imports. Pages ship zero JavaScript unless a component opts in.
+
+## Client Directives
+
+Imported React components opt into browser rendering with a `client:*` directive. Directives live in TSX (layouts, blocks, components), never in MDX bodies, and never on HTML elements or same-file components.
+
+```tsx
+import Search from "@/components/search"
+
+export default function Header() {
+  return <Search client:load />
+}
+```
+
+1. `client:load` — hydrates immediately. For controls that must work right away.
+2. `client:idle` — hydrates when the browser is idle. For page chrome like sidebars.
+3. `client:visible` — hydrates when scrolled into view. For below-the-fold widgets.
+4. `client:media="(min-width: 64rem)"` — hydrates when the media query matches.
+5. `client:only` — skips static rendering, renders in the browser only.
+
+## Boundaries
+
+Island props must be JSON-serializable — functions, symbols, React elements, and cyclic values throw at build time. Children pass through as static HTML; a nested `client:*` component inside them becomes its own independent island. Components that share client state belong inside one island root.

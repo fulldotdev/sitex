@@ -1,7 +1,7 @@
 ---
 layout: "doc"
 title: "Pages"
-description: "MDX pages, typed frontmatter, TSX layouts, globals, and the pages API."
+description: "MDX pages with typed frontmatter and the pages API."
 ---
 
 Every page is an MDX file in `src/pages`. The file path is the route: `index.mdx` is `/`, `docs/pages.mdx` is `/docs/pages`. Routes are static — no dynamic segments, no TSX pages.
@@ -24,79 +24,20 @@ noindex: true # robots noindex + removed from sitemap
 
 Any other field passes through to the layout as a prop and to the pages API. `path`, `url`, `locale`, `headings`, and `children` are reserved.
 
-The MDX body is regular Markdown and can import React components:
+## MDX Body
+
+The body is regular Markdown and can import React components. A fully custom page is one block component in an otherwise empty body:
 
 ```mdx
-import PricingTable from "@/components/blocks/pricing-table"
+---
+layout: "base"
+title: "Pricing"
+description: "Simple pricing for teams."
+---
 
-<PricingTable />
-```
+import PricingPage from "@/components/blocks/pricing-page"
 
-## Layouts
-
-A layout is a TSX file in `src/layouts` that renders the full document. It receives one props object: the page frontmatter plus Sitex-provided `path`, `url`, `locale`, `headings`, and `children`. Type extra frontmatter with `LayoutProps<T>`:
-
-```tsx
-import type { LayoutProps } from "@fulldotdev/sitex"
-
-type PostData = { badge?: string }
-
-export default function PostLayout({
-  title,
-  badge,
-  headings,
-  children,
-}: LayoutProps<PostData>) {
-  return (
-    <html>
-      <head>
-        <title>{title}</title>
-      </head>
-      <body>
-        <nav>
-          {headings.map((h) => (
-            <a key={h.id} href={h.href}>
-              {h.label}
-            </a>
-          ))}
-        </nav>
-        <article>
-          <h1>{title}</h1>
-          {badge && <span>{badge}</span>}
-          {children}
-        </article>
-      </body>
-    </html>
-  )
-}
-```
-
-Sitex writes one typecheck file per page to `.sitex/typecheck`, so `tsc` reports frontmatter that does not match the layout props.
-
-## Globals
-
-Shared chrome content — name, logo, navigation, footer links — lives in `src/globals/index.yaml` and is imported with `sitex:globals` (fully typed from the YAML):
-
-```tsx
-import globals from "sitex:globals"
-```
-
-`index.yaml` serves the root locale; its language tag comes from the `site.locale` plugin option (default `"en"`) and sets `<html lang>`. Files like `nl.yaml` define locale variants served under `/nl` routes, available via the `locales` export and the layout `locale` prop.
-
-## MDX Components
-
-Override Markdown elements globally in the plugin config, or per layout with an `mdxComponents` export. Layout entries win.
-
-```ts
-// vite.config.ts
-sitex({ mdx: { components: { pre: "@/components/mdx/pre" } } })
-```
-
-```tsx
-// src/layouts/doc.tsx
-import MdxPre from "@/components/mdx/pre"
-
-export const mdxComponents = { pre: MdxPre }
+<PricingPage />
 ```
 
 ## Pages API

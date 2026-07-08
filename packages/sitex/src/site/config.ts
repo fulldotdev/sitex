@@ -15,12 +15,20 @@ export function resolveSiteConfig(site: SiteConfig | undefined) {
     throw new Error(`Sitex site config must be an object when provided.`)
   }
 
-  const url = readSiteUrl(site?.url ?? readDeploymentUrl())
+  const url = site?.url ?? readDeploymentUrl()
 
   return {
-    url,
+    // Builds require a URL for canonical, sitemap, and robots output; dev
+    // falls back to localhost. The plugin enforces this in configResolved.
+    url: url === undefined ? "" : readSiteUrl(url),
     locale: readSiteLocale(site?.locale),
   } satisfies ResolvedSiteConfig
+}
+
+export function createMissingSiteUrlError() {
+  return new Error(
+    `Sitex needs a site URL for canonical, sitemap, and robots output. Pass sitex({ site: { url } }) or set SITE_URL, PUBLIC_SITE_URL, PUBLIC_URL, APP_URL, BASE_URL, URL, VERCEL_PROJECT_PRODUCTION_URL, CF_PAGES_URL, RENDER_EXTERNAL_URL, RENDER_EXTERNAL_HOSTNAME, RAILWAY_PUBLIC_DOMAIN, KOYEB_PUBLIC_DOMAIN, DEPLOY_PRIME_URL, DEPLOY_URL, VERCEL_BRANCH_URL, or VERCEL_URL.`
+  )
 }
 
 function readSiteLocale(value: unknown) {
@@ -70,12 +78,6 @@ function readDeploymentUrl() {
 }
 
 function readSiteUrl(value: unknown) {
-  if (value === undefined) {
-    throw new Error(
-      `Sitex needs a site URL for sitemap and robots output. Pass sitex({ site: { url } }) or set SITE_URL, PUBLIC_SITE_URL, PUBLIC_URL, APP_URL, BASE_URL, URL, VERCEL_PROJECT_PRODUCTION_URL, CF_PAGES_URL, RENDER_EXTERNAL_URL, RENDER_EXTERNAL_HOSTNAME, RAILWAY_PUBLIC_DOMAIN, KOYEB_PUBLIC_DOMAIN, DEPLOY_PRIME_URL, DEPLOY_URL, VERCEL_BRANCH_URL, or VERCEL_URL.`
-    )
-  }
-
   const url = normalizeSiteUrl(readRequiredString(value, "site.url"))
 
   let parsed: URL

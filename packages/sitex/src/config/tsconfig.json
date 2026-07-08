@@ -16,7 +16,16 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react-jsx",
-    "types": ["vite-plus/client"]
+    "types": ["vite-plus/client"],
+    "paths": {
+      "@/*": ["${configDir}/src/*"]
+    }
   },
+  "include": [
+    "${configDir}/src/**/*",
+    "${configDir}/.sitex/**/*.d.ts",
+    "${configDir}/.sitex/typecheck/**/*.tsx",
+    "${configDir}/vite.config.ts"
+  ],
   "files": ["../types/virtual.d.ts"]
 }
