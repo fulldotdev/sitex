@@ -1,0 +1,36 @@
+---
+layout: "doc"
+title: "Rating"
+description: "Star rating display."
+---
+
+A read-only row of five stars that fills to match a numeric rating, including fractional values. Use it for review scores on product cards and testimonials.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/rating.json
+```
+
+## Usage
+
+```tsx
+import { Rating } from "@/components/ui/rating"
+
+export function ReviewScore() {
+  return (
+    <p className="flex items-center gap-2">
+      <Rating value={4.5} />
+      <span className="text-sm text-muted-foreground">4.5 out of 5</span>
+    </p>
+  )
+}
+```
+
+Key points:
+
+1. `Rating` is the only export; it renders a `div` and accepts all standard `div` props.
+2. `value` (default `5`) sets how many of the five stars are filled; fractions like `4.5` render a partially filled star.
+3. The stars scale with the surrounding font size (they are sized in `em`), so set `className="text-sm"` or similar to resize them; filled stars use the `primary` color and empty stars a muted track.
+
+It is purely presentational with no state or handlers, so no client directive is needed.

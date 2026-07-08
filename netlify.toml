@@ -1,7 +1,77 @@
 [build]
-command = "pnpm --filter @fulldotdev/sitex build && pnpm --filter docs build"
+command = "pnpm --filter @fulldotdev/sitex build && pnpm --filter @fulldotdev/ui build && pnpm --filter docs build"
 publish = "apps/docs/dist"
 
 [build.environment]
-NODE_VERSION = "22.12.0"
+NODE_VERSION = "22.18.0"
 PNPM_VERSION = "11.1.2"
+
+[[redirects]]
+from = "/docs/tsx-pages"
+to = "/docs/pages"
+status = 301
+
+[[redirects]]
+from = "/docs/mdx"
+to = "/docs/pages"
+status = 301
+
+[[redirects]]
+from = "/docs/page-routing"
+to = "/docs/pages"
+status = 301
+
+[[redirects]]
+from = "/docs/folder-structure"
+to = "/docs/installation"
+status = 301
+
+[[redirects]]
+from = "/docs/content"
+to = "/docs/pages"
+status = 301
+
+[[redirects]]
+from = "/docs/mdx-components"
+to = "/docs/layouts"
+status = 301
+
+[[redirects]]
+from = "/docs/seo"
+to = "/docs/layouts"
+status = 301
+
+[[redirects]]
+from = "/docs/rendering-and-assets"
+to = "/docs/components"
+status = 301
+
+[[redirects]]
+from = "/docs/island-rendering"
+to = "/docs/components"
+status = 301
+
+[[redirects]]
+from = "/docs/rendering"
+to = "/docs/components"
+status = 301
+
+[[redirects]]
+from = "/docs/ui"
+to = "/docs/components"
+status = 301
+
+[[redirects]]
+from = "/docs/ui/installation"
+to = "/docs/components"
+status = 301
+
+[[redirects]]
+from = "/docs/ui/components"
+to = "/docs/components"
+status = 301
+
+[[redirects]]
+from = "/docs/ui/*"
+to = "/docs/components/:splat"
+status = 301

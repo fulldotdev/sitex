@@ -1,0 +1,41 @@
+---
+layout: "doc"
+title: "Price"
+description: "Locale-aware price display with sale and discount formatting."
+---
+
+A price display that formats amounts with `Intl.NumberFormat` and handles compare-at pricing with a strikethrough and a discount badge. Use it on product cards, pricing tables, and checkout summaries.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/price.json
+```
+
+## Usage
+
+```tsx
+import { Price, PriceUnit, PriceValue } from "@/components/ui/price"
+
+export function ProductPrice() {
+  return (
+    <Price>
+      <PriceValue
+        price={19.99}
+        compareAt={29.99}
+        currency="EUR"
+        locale="nl-NL"
+      />
+      <PriceUnit>per month</PriceUnit>
+    </Price>
+  )
+}
+```
+
+Key parts:
+
+1. `Price` is a flex wrapper that lays out its children; `PriceUnit` renders a muted suffix such as a billing period.
+2. `PriceValue` formats `price` and optional `compareAt`. Both accept a `PriceValueType`: a number, a numeric string, a range string like `"10 - 20"`, or a `[min, max]` tuple (ranges render as `"$10.00 - $20.00"`). It renders nothing when `price` is empty.
+3. `currency` (default `"USD"`) and `locale` (default `"en-US"`) drive the currency formatting.
+4. When `compareAt` is higher than `price`, the original price is shown struck through with a "Save …" badge; `discountFormat` switches the badge between `"percentage"` (default) and `"amount"`, and `showDiscount={false}` hides it. The `variant` prop styles the main value: `"default"` or `"sale"` (muted with line-through).
+5. The helpers `formatPriceValue`, `formatPriceDiscount`, and `parseSinglePriceValue` are exported for formatting prices outside the component, along with `priceValueVariants`.

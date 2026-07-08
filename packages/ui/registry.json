@@ -1,0 +1,197 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "sitex",
+  "homepage": "https://sitex.full.dev",
+  "items": [
+    {
+      "name": "banner",
+      "type": "registry:ui",
+      "title": "Banner",
+      "description": "Dismissable site-wide announcement banner.",
+      "dependencies": ["class-variance-authority", "lucide-react"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/banner.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "code",
+      "type": "registry:ui",
+      "title": "Code",
+      "description": "Code block with shiki syntax highlighting and a copy button; drop-in MDX pre replacement.",
+      "dependencies": [
+        "@shikijs/core",
+        "@shikijs/engine-javascript",
+        "@shikijs/langs",
+        "@shikijs/themes",
+        "lucide-react"
+      ],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/code.tsx",
+          "type": "registry:ui"
+        },
+        {
+          "path": "src/components/ui/code-copy-button.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "gradient",
+      "type": "registry:ui",
+      "title": "Gradient",
+      "description": "Decorative gradient surface for hero and section backgrounds.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/gradient.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "header",
+      "type": "registry:ui",
+      "title": "Header",
+      "description": "Site header with container and grouping primitives.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/header.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "layout",
+      "type": "registry:ui",
+      "title": "Layout",
+      "description": "Document primitives for Sitex layouts: html, head with SEO meta and JSON-LD, body, and main.",
+      "dependencies": ["schema-dts"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/layout.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "marquee",
+      "type": "registry:ui",
+      "title": "Marquee",
+      "description": "Continuously scrolling strip for logos and quotes.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/marquee.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "price",
+      "type": "registry:ui",
+      "title": "Price",
+      "description": "Locale-aware price display with sale and discount formatting.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/price.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "rating",
+      "type": "registry:ui",
+      "title": "Rating",
+      "description": "Star rating display.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/rating.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "section",
+      "type": "registry:ui",
+      "title": "Section",
+      "description": "Page section with consistent vertical rhythm and container.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/section.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "theme-toggle",
+      "type": "registry:ui",
+      "title": "Theme Toggle",
+      "description": "Light/dark theme provider and toggle button.",
+      "dependencies": ["lucide-react"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/theme-toggle.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "tile",
+      "type": "registry:ui",
+      "title": "Tile",
+      "description": "Card-like tile and tile group for feature grids.",
+      "dependencies": ["class-variance-authority"],
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/tile.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "toc",
+      "type": "registry:ui",
+      "title": "Toc",
+      "description": "Table of contents navigation for page headings.",
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/toc.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    },
+    {
+      "name": "typography",
+      "type": "registry:ui",
+      "title": "Typography",
+      "description": "Prose typography primitives for MDX content.",
+      "registryDependencies": ["utils"],
+      "files": [
+        {
+          "path": "src/components/ui/typography.tsx",
+          "type": "registry:ui"
+        }
+      ]
+    }
+  ]
+}

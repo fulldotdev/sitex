@@ -1,6 +1,6 @@
 # Contributing
 
-SiteX is experimental. Keep changes small, explicit, and aligned with the current scope.
+Sitex is experimental. Keep changes small, explicit, and aligned with the current scope.
 
 ## Local setup
 
@@ -20,7 +20,7 @@ pnpm ready
 
 ## Scope
 
-- Keep the public API small: the Vite plugin, TypeScript config, and client directives.
-- Prefer static routes and explicit TSX files.
-- Do not add SSR, generated routes, content collections, or new client directives without first documenting the decision.
-- Preserve the reference app as a simple content-site example.
+- Keep the public API small: the Vite plugin, the type exports, the TypeScript config, and the `client:*` directives.
+- Pages are static MDX files rendered through app layouts. Document the decision before adding rendering modes, generated routes, or content collections.
+- UI components live in `packages/ui` and ship through the shadcn registry, not npm.
+- The docs app in `apps/docs` is the reference app; keep it a simple content site.

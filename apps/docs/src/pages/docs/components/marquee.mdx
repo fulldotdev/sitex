@@ -1,0 +1,39 @@
+---
+layout: "doc"
+title: "Marquee"
+description: "Continuously scrolling strip for logos and quotes."
+---
+
+A CSS-animated strip that scrolls its children in a continuous loop. Use it for logo walls, testimonial tickers, or any row of items you want to drift across the page.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/marquee.json
+```
+
+## Usage
+
+```tsx
+import { Marquee } from "@/components/ui/marquee"
+
+export function LogoMarquee() {
+  return (
+    <Marquee direction="left" duration={30} gap="3rem" pauseOnHover>
+      <img src="/logos/acme.svg" alt="Acme" />
+      <img src="/logos/globex.svg" alt="Globex" />
+      <img src="/logos/initech.svg" alt="Initech" />
+    </Marquee>
+  )
+}
+```
+
+Key props:
+
+1. `direction` sets the scroll axis and heading: `"left"` (default), `"right"`, `"top"`, or `"bottom"`. Vertical directions stack the children in a column.
+2. `duration` (or the legacy `time` prop, default `30`) controls one loop's length; a number is treated as seconds, a string is passed through as a CSS duration.
+3. `gap` (default `"1rem"`) spaces the items and is also used to offset the loop seam.
+4. `infinite` (default `true`) duplicates the children in an `aria-hidden` copy so the loop is seamless; set it to `false` to animate a single pass without duplication.
+5. `pauseOnHover` pauses the animation while the pointer is over the marquee, and `variant` picks the edge treatment: `"gradient"` (default, fades the edges with a mask) or `"solid"`.
+
+The animation is pure CSS (it also respects `prefers-reduced-motion`), so no client directive is needed. `marqueeVariants` is exported for reusing the variant classes elsewhere.

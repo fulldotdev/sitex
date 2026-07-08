@@ -1,7 +1,9 @@
-import type { MarkdownLayoutProps } from "@fulldotdev/sitex"
+import type { LayoutProps } from "@fulldotdev/sitex"
+import type { ComponentProps } from "react"
 
-import DocLayout from "@/components/layouts/doc"
-import { docsNavigation } from "@/components/layouts/base"
+import { Doc1 } from "@/components/blocks/doc-1"
+import BaseLayout from "@/layouts/base"
+import { docsNavigation } from "@/lib/globals"
 
 type TocItem = {
   depth?: number
@@ -9,43 +11,65 @@ type TocItem = {
   label: string
 }
 
-type DocFrontmatter = {
-  title: string
-  description: string
-  order?: number
+type DocData = {
   tocItems?: readonly TocItem[]
 }
 
-function findPath(path: string | undefined, order: number | undefined) {
-  if (path) return path
-  if (order !== undefined) return docsNavigation[order - 1]?.href ?? "/"
+function normalizePath(path: string) {
+  if (path === "/") return path
 
-  return "/"
+  return path.replace(/\/$/, "")
 }
 
 export default function DocMdxLayout({
   title,
   description,
   headings,
-  order,
-  path,
   tocItems,
   children,
-}: MarkdownLayoutProps<DocFrontmatter>) {
+  path,
+  url,
+  locale,
+  image,
+  jsonLd,
+  publishedAt,
+  type,
+  updatedAt,
+}: LayoutProps<DocData>) {
   const doc = {
     title,
     description,
     tocItems: tocItems ? [...tocItems] : headings ? [...headings] : undefined,
-  }
+  } satisfies Omit<
+    ComponentProps<typeof Doc1>,
+    "children" | "previousPage" | "nextPage"
+  >
+  const currentPath = normalizePath(path)
+  const currentIndex = docsNavigation.findIndex(
+    (item) => normalizePath(item.href) === currentPath
+  )
+  const previousPage =
+    currentIndex > 0 ? docsNavigation[currentIndex - 1] : undefined
+  const nextPage =
+    currentIndex >= 0 ? docsNavigation[currentIndex + 1] : undefined
 
   return (
-    <DocLayout
+    <BaseLayout
       title={title}
       description={description}
-      path={findPath(path, order)}
-      doc={doc}
+      headings={headings}
+      image={image}
+      jsonLd={jsonLd}
+      locale={locale}
+      path={path}
+      publishedAt={publishedAt}
+      type={type}
+      updatedAt={updatedAt}
+      url={url}
     >
-      {children}
-    </DocLayout>
+      <Doc1 {...doc} previousPage={previousPage} nextPage={nextPage}>
+        {children}
+      </Doc1>
+    </BaseLayout>
   )
 }

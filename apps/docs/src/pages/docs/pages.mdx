@@ -1,0 +1,54 @@
+---
+layout: "doc"
+title: "Pages"
+description: "MDX pages with typed frontmatter and the pages API."
+---
+
+Every page is an MDX file in `src/pages`. The file path is the route: `index.mdx` is `/`, `docs/pages.mdx` is `/docs/pages`. Routes are static — no dynamic segments, no TSX pages.
+
+## Frontmatter
+
+`layout`, `title`, and `description` are required. Everything else is optional:
+
+```yaml
+layout: "doc" # renders with src/layouts/doc.tsx; "blog/post" nests
+title: "Pages"
+description: "Create pages with MDX files."
+type: "webpage" # webpage (default) | article | faq
+image: "/covers/pages.png" # social image path or absolute URL
+canonical: "https://example.com/original" # canonical override; excludes page from sitemap
+noindex: true # robots noindex + removed from sitemap
+```
+
+`type: article` requires `publishedAt` (`YYYY-MM-DD`) and allows `updatedAt` and `author`. `type: faq` requires `questions` as a list of `{ question, answer }`.
+
+Any other field passes through to the layout as a prop and to the pages API. `path`, `url`, `locale`, `headings`, and `children` are reserved.
+
+## MDX Body
+
+The body is regular Markdown and can import React components. A fully custom page is one block component in an otherwise empty body:
+
+```mdx
+---
+layout: "base"
+title: "Pricing"
+description: "Simple pricing for teams."
+---
+
+import PricingPage from "@/components/blocks/pricing-page"
+
+<PricingPage />
+```
+
+## Pages API
+
+Read frontmatter across the site from layouts and components with `sitex:pages` — for indexes, cards, and navigation. Both helpers are async; async components are fine because everything renders at build time.
+
+```tsx
+import { getPage, getPages } from "sitex:pages"
+
+const posts = await getPages("/blog") // all pages under /blog
+const post = await getPage("/blog/hello") // Page | undefined
+```
+
+`Page` is a stable type: the frontmatter schema plus `path` and `headings`, with extra fields typed as `JsonValue`.

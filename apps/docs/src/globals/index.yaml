@@ -1,0 +1,54 @@
+name: Sitex Docs
+logo:
+  label: Sitex
+  href: /
+header:
+  githubRepo: fulldotdev/sitex
+  navigation:
+    - href: /docs
+      label: Docs
+sidebar:
+  sections:
+    - label: Docs
+      href: /docs
+      navigation:
+        - label: Docs
+          links:
+            - href: /docs
+              label: Introduction
+            - href: /docs/installation
+              label: Installation
+            - href: /docs/pages
+              label: Pages
+            - href: /docs/layouts
+              label: Layouts
+            - href: /docs/components
+              label: Components
+        - label: Components
+          links:
+            - href: /docs/components/banner
+              label: Banner
+            - href: /docs/components/code
+              label: Code
+            - href: /docs/components/gradient
+              label: Gradient
+            - href: /docs/components/header
+              label: Header
+            - href: /docs/components/layout
+              label: Layout
+            - href: /docs/components/marquee
+              label: Marquee
+            - href: /docs/components/price
+              label: Price
+            - href: /docs/components/rating
+              label: Rating
+            - href: /docs/components/section
+              label: Section
+            - href: /docs/components/theme-toggle
+              label: Theme Toggle
+            - href: /docs/components/tile
+              label: Tile
+            - href: /docs/components/toc
+              label: Toc
+            - href: /docs/components/typography
+              label: Typography

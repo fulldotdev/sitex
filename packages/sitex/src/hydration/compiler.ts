@@ -371,5 +371,3 @@ function applyReplacements(code: string, replacements: Replacement[]) {
 
   return result
 }
-
-export { collectHydrationEntries as collectIslands }

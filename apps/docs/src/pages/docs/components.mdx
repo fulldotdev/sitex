@@ -1,0 +1,58 @@
+---
+layout: "doc"
+title: "Components"
+description: "Static rendering by default, client directives, and the pre-built component registry."
+---
+
+Components are plain React. Everything renders to static HTML at build time, and Sitex follows each page's module graph to include exactly the CSS that page imports. Pages ship zero JavaScript unless a component opts in.
+
+## Client Directives
+
+Imported React components opt into browser rendering with a `client:*` directive. Directives live in TSX (layouts, blocks, components), never in MDX bodies, and never on HTML elements or same-file components.
+
+```tsx
+import Search from "@/components/search"
+
+export default function Header() {
+  return <Search client:load />
+}
+```
+
+1. `client:load` — hydrates immediately. For controls that must work right away.
+2. `client:idle` — hydrates when the browser is idle. For page chrome like sidebars.
+3. `client:visible` — hydrates when scrolled into view. For below-the-fold widgets.
+4. `client:media="(min-width: 64rem)"` — hydrates when the media query matches.
+5. `client:only` — skips static rendering, renders in the browser only.
+
+Island props must be JSON-serializable — functions, symbols, React elements, and cyclic values throw at build time. Children pass through as static HTML; a nested `client:*` component inside them becomes its own independent island. Components that share client state belong inside one island root.
+
+## Pre-Built Components
+
+Sitex ships components for the pieces content sites keep needing — sections, typography, code blocks, a table of contents, a price display. They follow the [shadcn/ui](https://ui.shadcn.com) conventions (Tailwind, `cn` from `@/lib/utils`, your theme tokens) and install from the Sitex registry: the source lands in `src/components/ui`, where you own and edit it. No npm package, no version to track, and they compose with regular shadcn/ui components.
+
+Initialize shadcn once (creates `components.json` and `src/lib/utils.ts`), then add what you need:
+
+```bash
+pnpm dlx shadcn@latest init
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/section.json
+```
+
+| Component                                       | Description                                                                                  |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| [`banner`](/docs/components/banner)             | Dismissable site-wide announcement banner.                                                   |
+| [`code`](/docs/components/code)                 | Code block with shiki highlighting and a copy button; drop-in MDX `pre` replacement.         |
+| [`gradient`](/docs/components/gradient)         | Decorative gradient surface for hero and section backgrounds.                                |
+| [`header`](/docs/components/header)             | Site header with container and grouping primitives.                                          |
+| [`layout`](/docs/components/layout)             | Document primitives for Sitex layouts: html, head with SEO meta and JSON-LD, body, and main. |
+| [`marquee`](/docs/components/marquee)           | Continuously scrolling strip for logos and quotes.                                           |
+| [`price`](/docs/components/price)               | Locale-aware price display with sale and discount formatting.                                |
+| [`rating`](/docs/components/rating)             | Star rating display.                                                                         |
+| [`section`](/docs/components/section)           | Page section with consistent vertical rhythm and container.                                  |
+| [`theme-toggle`](/docs/components/theme-toggle) | Light/dark theme provider and toggle button.                                                 |
+| [`tile`](/docs/components/tile)                 | Card-like tile and tile group for feature grids.                                             |
+| [`toc`](/docs/components/toc)                   | Table of contents navigation for page headings.                                              |
+| [`typography`](/docs/components/typography)     | Prose typography primitives for MDX content.                                                 |
+
+## Prefetch
+
+Navigation is prefetched by default: Sitex injects speculation rules so supporting browsers prerender links on hover (instant navigation), plus a small hover-prefetch script for the rest. Disable it with `sitex({ prefetch: false })`, or per link tree with a `data-no-prefetch` attribute.

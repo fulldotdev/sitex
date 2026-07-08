@@ -2,25 +2,11 @@
 
 import { type ReactNode } from "react"
 
-import { ChevronDownIcon, ExternalLinkIcon } from "lucide-react"
+import { ExternalLinkIcon } from "lucide-react"
 
+import { ModeToggle } from "@/components/mode-toggle"
 import { ThemeProvider } from "@/components/theme-provider"
-import {
-  Breadcrumb,
-  BreadcrumbEllipsis,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Header, HeaderContainer, HeaderGroup } from "@/components/ui/header"
 import { Logo, LogoImage, LogoText } from "@/components/ui/logo"
 import { Separator } from "@/components/ui/separator"
@@ -37,16 +23,21 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar"
-import { ThemeToggle } from "@/components/ui/theme-toggle"
 import { cn } from "@/lib/utils"
 
 type NavigationGroup = {
   label: string
   href?: string
-  links?: {
+  links?: readonly {
     label: string
     href: string
   }[]
+}
+
+type SidebarSection = {
+  label: string
+  href: string
+  navigation: readonly NavigationGroup[]
 }
 
 type Sidebar1Props = {
@@ -55,17 +46,7 @@ type Sidebar1Props = {
     label: string
     href: string
   }
-  breadcrumb: {
-    items: {
-      label: string
-      href: string
-    }[]
-    menu: {
-      label: string
-      href: string
-    }[]
-  }
-  navigation: NavigationGroup[]
+  sections: readonly SidebarSection[]
   githubRepo: string
   path: string
   children?: ReactNode
@@ -77,24 +58,36 @@ function normalizePath(path: string) {
   return path.replace(/\/$/, "")
 }
 
-function toDomId(value: string) {
-  return value.replace(/[^a-zA-Z0-9_-]+/g, "-").replace(/^-+|-+$/g, "")
+function findActiveSection(
+  sections: readonly SidebarSection[],
+  currentPath: string
+) {
+  const matches = sections.filter((section) => {
+    const sectionPath = normalizePath(section.href)
+
+    return (
+      currentPath === sectionPath || currentPath.startsWith(`${sectionPath}/`)
+    )
+  })
+
+  return matches.sort((a, b) => b.href.length - a.href.length)[0] ?? sections[0]
 }
 
 function Sidebar1({
   className,
   logo,
-  breadcrumb,
-  navigation,
+  sections,
   githubRepo,
   path,
   children,
 }: Sidebar1Props) {
   const currentPath = normalizePath(path)
+  const activeSection = findActiveSection(sections, currentPath)
+  const navigation = activeSection?.navigation ?? []
 
   return (
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-      <SidebarProvider>
+      <SidebarProvider className="font-sans antialiased">
         <Sidebar
           className={cn(className)}
           collapsible="offcanvas"
@@ -111,6 +104,24 @@ function Sidebar1({
                 <LogoText className="truncate">Sitex</LogoText>
               </Logo>
             </SidebarMenuButton>
+            {sections.length > 1 ? (
+              <div className="flex gap-1 rounded-lg bg-sidebar-accent/50 p-1">
+                {sections.map((section) => (
+                  <a
+                    key={section.href}
+                    href={section.href}
+                    className={cn(
+                      "flex-1 rounded-md px-2 py-1 text-center text-xs font-medium transition-colors",
+                      section === activeSection
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {section.label}
+                  </a>
+                ))}
+              </div>
+            ) : null}
           </SidebarHeader>
           <SidebarContent className="mask-[linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)] [-webkit-mask-image:linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)] group-data-[collapsible=icon]:mask-none group-data-[collapsible=icon]:[-webkit-mask-image:none]">
             {navigation.map((group) => (
@@ -141,14 +152,6 @@ function Sidebar1({
                   orientation="vertical"
                   className="my-auto mr-2 h-4"
                 />
-                <Breadcrumb className="hidden md:block">
-                  <BreadcrumbList>
-                    <BreadcrumbTrail
-                      breadcrumb={breadcrumb}
-                      currentPath={currentPath}
-                    />
-                  </BreadcrumbList>
-                </Breadcrumb>
               </HeaderGroup>
               <HeaderGroup className="gap-1">
                 <Button
@@ -167,7 +170,7 @@ function Sidebar1({
                   <ExternalLinkIcon />
                   <span className="hidden sm:inline">GitHub</span>
                 </Button>
-                <ThemeToggle />
+                <ModeToggle />
               </HeaderGroup>
             </HeaderContainer>
           </Header>
@@ -183,134 +186,6 @@ function getNavigationItems(group: NavigationGroup) {
   if (group.href) return [{ label: group.label, href: group.href }]
 
   return []
-}
-
-function BreadcrumbTrail({
-  breadcrumb,
-  currentPath,
-}: {
-  breadcrumb: Sidebar1Props["breadcrumb"]
-  currentPath: string
-}) {
-  return (
-    <>
-      {breadcrumb.items.map((item, index) => {
-        const isLast = index === breadcrumb.items.length - 1
-        const isHome = item.href === "/"
-        const hasMenu =
-          !isHome &&
-          breadcrumb.menu.some(
-            (menuItem) =>
-              normalizePath(menuItem.href) === normalizePath(item.href)
-          )
-
-        return (
-          <BreadcrumbFragment
-            currentPath={currentPath}
-            hasMenu={hasMenu}
-            isLast={isLast}
-            item={item}
-            key={`${item.href}-${index}`}
-            menu={breadcrumb.menu}
-            showSeparator={index > 0}
-          />
-        )
-      })}
-      {breadcrumb.menu.length > 0 && currentPath === "/" ? (
-        <>
-          <BreadcrumbSeparator>/</BreadcrumbSeparator>
-          <BreadcrumbItem>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                aria-label="Open page menu"
-                className="inline-flex items-center leading-none transition-colors hover:text-foreground"
-                id="breadcrumb-page-menu"
-              >
-                <BreadcrumbEllipsis />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                <DropdownMenuGroup>
-                  {breadcrumb.menu.map((item) => (
-                    <a
-                      className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-accent hover:text-accent-foreground"
-                      href={item.href}
-                      key={item.href}
-                    >
-                      {item.label}
-                    </a>
-                  ))}
-                </DropdownMenuGroup>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </BreadcrumbItem>
-        </>
-      ) : null}
-    </>
-  )
-}
-
-function BreadcrumbFragment({
-  currentPath,
-  hasMenu,
-  isLast,
-  item,
-  menu,
-  showSeparator,
-}: {
-  currentPath: string
-  hasMenu: boolean
-  isLast: boolean
-  item: { label: string; href: string }
-  menu: { label: string; href: string }[]
-  showSeparator: boolean
-}) {
-  return (
-    <>
-      {showSeparator ? <BreadcrumbSeparator>/</BreadcrumbSeparator> : null}
-      <BreadcrumbItem>
-        {hasMenu ? (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              aria-current={isLast ? "page" : undefined}
-              aria-label={`${item.label} pages`}
-              className={cn(
-                "inline-flex items-center gap-1 transition-colors hover:text-foreground",
-                isLast && "text-foreground"
-              )}
-              id={`breadcrumb-menu-${toDomId(item.href)}`}
-            >
-              {item.label}
-              <ChevronDownIcon className="size-3.5 opacity-70" aria-hidden />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              <DropdownMenuGroup>
-                {menu.map((menuItem) => (
-                  <a
-                    aria-current={
-                      normalizePath(menuItem.href) === currentPath
-                        ? "page"
-                        : undefined
-                    }
-                    className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-none select-none hover:bg-accent hover:text-accent-foreground aria-[current=page]:text-foreground"
-                    href={menuItem.href}
-                    key={menuItem.href}
-                  >
-                    {menuItem.label}
-                  </a>
-                ))}
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        ) : isLast ? (
-          <BreadcrumbPage>{item.label}</BreadcrumbPage>
-        ) : (
-          <BreadcrumbLink render={<a href={item.href} />}>
-            {item.label}
-          </BreadcrumbLink>
-        )}
-      </BreadcrumbItem>
-    </>
-  )
 }
 
 export { Sidebar1, type Sidebar1Props }

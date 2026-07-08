@@ -1,0 +1,51 @@
+---
+layout: "doc"
+title: "Typography"
+description: "Prose typography primitives for MDX content."
+---
+
+Styled typography primitives for headings, paragraphs, lists, tables, and inline elements. Use them as MDX component overrides or directly wherever you render prose.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/typography.json
+```
+
+## Usage
+
+```tsx
+import {
+  TypographyH1,
+  TypographyInlineCode,
+  TypographyLead,
+  TypographyList,
+  TypographyListItem,
+  TypographyP,
+} from "@/components/ui/typography"
+
+export function Intro() {
+  return (
+    <>
+      <TypographyH1 size="lg">Getting started</TypographyH1>
+      <TypographyLead>Build static sites with MDX and React.</TypographyLead>
+      <TypographyP>
+        Install with <TypographyInlineCode>pnpm add</TypographyInlineCode> and
+        create your first page.
+      </TypographyP>
+      <TypographyList as="ol">
+        <TypographyListItem>Install the package.</TypographyListItem>
+        <TypographyListItem>Add a page.</TypographyListItem>
+      </TypographyList>
+    </>
+  )
+}
+```
+
+Key parts:
+
+1. Headings: `TypographyH1` through `TypographyH4`, each with a `size` prop (`sm`, `default`, `lg`) that steps the font size up or down one level.
+2. Text: `TypographyP`, `TypographyLead` (larger muted intro text), `TypographyBlockquote`, `TypographyA` (underlined link), and `TypographyInlineCode`.
+3. Lists: `TypographyList` renders a `ul` by default or an `ol` via `as="ol"`; use `TypographyListItem` for items.
+4. Tables: `TypographyTable` (wrapped in a scrollable bordered container, styleable via `containerClassName`) with `TypographyTableRow`, `TypographyTableHead`, and `TypographyTableCell`; the cells respect the `align` attribute.
+5. `Typography` is a generic wrapper (`div` by default, changeable via `as`) with a `size` prop, useful as a prose container.

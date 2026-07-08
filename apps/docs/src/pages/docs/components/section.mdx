@@ -1,0 +1,39 @@
+---
+layout: "doc"
+title: "Section"
+description: "Page section with consistent vertical rhythm and container."
+---
+
+A `section` element with consistent vertical padding plus a centered container for its content. Use it as the outer shell of every page block so sections share the same rhythm and max width.
+
+## Install
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/section.json
+```
+
+## Usage
+
+```tsx
+import { Section, SectionContainer } from "@/components/ui/section"
+
+export function FeatureSection() {
+  return (
+    <Section variant="floating" id="features">
+      <SectionContainer>
+        <h2>Features</h2>
+        <p>Everything you need to ship a marketing site.</p>
+      </SectionContainer>
+    </Section>
+  )
+}
+```
+
+Key parts:
+
+1. `Section` renders a `section` with vertical padding, column flex layout, and a scroll margin so anchor links land cleanly below a fixed header.
+2. The `variant` prop picks the shell: `"default"` (full-width on the page background) or `"floating"` (a centered, rounded, bordered card with a shadow, capped at the `--container` width).
+3. `SectionContainer` centers the content, caps it at `max-w-7xl`, and adds horizontal padding and an 8-unit column gap.
+4. `sectionVariants` is exported for reusing the variant classes elsewhere.
+
+Both parts are static wrappers around their children, so no client directive is needed.

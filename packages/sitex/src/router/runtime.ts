@@ -1,4 +1,5 @@
 import type { ReactNode } from "react"
+import type { Graph, Thing, WithContext } from "schema-dts"
 
 export type JsonValue =
   | string
@@ -8,33 +9,12 @@ export type JsonValue =
   | JsonValue[]
   | { [key: string]: JsonValue }
 
-export type RouteParams = Record<string, string>
-export type RouteRenderMode = "static" | "server"
+export type PageType = "webpage" | "article" | "faq"
+export type JsonLd = Graph | WithContext<Thing>
 
-export type StaticPath<Props = JsonValue> = {
-  params: RouteParams
-  props?: Props
-}
-
-export type StaticPaths<Props = JsonValue> =
-  | StaticPath<Props>[]
-  | (() => StaticPath<Props>[] | Promise<StaticPath<Props>[]>)
-
-export type PageContext<Props = unknown> = {
-  params: RouteParams
-  props: Props
-  request?: Request
-  url: URL
-}
-
-export type PageLayout<Props = unknown> = (
-  context: PageContext<Props>
-) => ReactNode | Promise<ReactNode>
-
-export type MarkdownLayoutProps<TData extends object = object> = TData & {
-  children: ReactNode
-  headings?: readonly MarkdownHeading[]
-  path?: string
+export type FaqQuestion = {
+  question: string
+  answer: string
 }
 
 export type MarkdownHeading = {
@@ -44,32 +24,56 @@ export type MarkdownHeading = {
   label: string
 }
 
-export type Route<Props = unknown> = {
-  file: string
-  layout: PageLayout<Props>
-  paramNames: string[]
-  params: RouteParams
-  path: string
-  props: Props
-  render: RouteRenderMode
-  score: number
+export type PageData = {
+  layout: string
+  title: string
+  description: string
+  type?: PageType
+  image?: string
+  canonical?: string
+  noindex?: boolean
+  publishedAt?: string
+  updatedAt?: string
+  author?: string
+  questions?: FaqQuestion[]
+  jsonLd?: JsonValue
+  headings: MarkdownHeading[]
+  [key: string]: JsonValue | undefined
 }
 
-type PageModule<Props = JsonValue> = {
+export type LayoutProps<TData extends object = object> = TData & {
+  title: string
+  description: string
+  type?: PageType
+  image?: string
+  canonical?: string
+  noindex?: boolean
+  publishedAt?: string
+  updatedAt?: string
+  author?: string
+  questions?: readonly FaqQuestion[]
+  jsonLd?: JsonLd | readonly JsonLd[]
+  path: string
+  url: string
+  locale: string
+  headings: readonly MarkdownHeading[]
+  children: ReactNode
+}
+
+export type Route = {
+  file: string
+  path: string
+  data: PageData
+  component: () => ReactNode | Promise<ReactNode>
+}
+
+type PageModule = {
   default?: unknown
-  paths?: StaticPaths<Props>
+  data?: unknown
   render?: unknown
 }
 
-type RouteMatch<Props = unknown> = {
-  params: RouteParams
-  route: Route<Props>
-}
-
-export async function readPageRoutes(
-  module: unknown,
-  file: string
-): Promise<Route<unknown>[]> {
+export function readPageRoute(module: unknown, file: string): Route {
   const pageModule = module as PageModule
   const component = pageModule.default
 
@@ -77,116 +81,41 @@ export async function readPageRoutes(
     throw new Error(`Page module "${file}" must default export a component.`)
   }
 
-  if (pageModule.render !== undefined && pageModule.render !== "server") {
-    const renderMode = JSON.stringify(pageModule.render)
-
+  if (pageModule.render !== undefined) {
     throw new Error(
-      `Page module "${file}" has unsupported render mode ${renderMode}. Only "server" is supported.`
+      `Page "${file}" exports render, but Sitex pages are static. Remove the render export.`
     )
   }
 
-  const render: RouteRenderMode =
-    pageModule.render === "server" ? "server" : "static"
-  const pattern = pageFileToRoutePattern(file)
-  const paramNames = readParamNames(pattern)
+  const data = pageModule.data
 
-  if (render === "server") {
-    return [
-      createRoute({
-        file,
-        layout: component as PageLayout,
-        paramNames,
-        params: {},
-        path: pattern,
-        props: undefined as unknown,
-        render,
-      }),
-    ]
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error(`Page module "${file}" must export page data.`)
   }
 
-  if (paramNames.length === 0) {
-    if (pageModule.paths !== undefined) {
-      throw new Error(
-        `Static page module "${file}" exports paths, but its route has no params.`
-      )
-    }
-
-    return [
-      createRoute({
-        file,
-        layout: component as PageLayout,
-        paramNames,
-        params: {},
-        path: pattern,
-        props: undefined as unknown,
-        render,
-      }),
-    ]
+  return {
+    file,
+    path: pageFileToRoutePath(file),
+    data: data as PageData,
+    component: component as Route["component"],
   }
-
-  if (pageModule.paths === undefined) {
-    throw new Error(
-      `Dynamic static page module "${file}" must export paths or render = "server".`
-    )
-  }
-
-  const paths =
-    typeof pageModule.paths === "function"
-      ? await pageModule.paths()
-      : pageModule.paths
-
-  if (!Array.isArray(paths)) {
-    throw new Error(`Static paths export in "${file}" must return an array.`)
-  }
-
-  return paths.map((path, index) => {
-    validateStaticPath(file, pattern, paramNames, path, index)
-
-    return createRoute({
-      file,
-      layout: component as PageLayout,
-      paramNames,
-      params: path.params,
-      path: fillRoutePattern(pattern, path.params),
-      props: path.props as unknown,
-      render,
-    })
-  })
 }
 
 export function sortRoutes(routes: Route[]) {
-  return [...routes].sort(
-    (a: Route, b: Route) => b.score - a.score || a.path.localeCompare(b.path)
-  )
+  return [...routes].sort((a, b) => a.path.localeCompare(b.path))
 }
 
-export function matchRoute(
-  routes: Route[],
-  url: string
-): RouteMatch | undefined {
-  const normalizedUrl = normalizeRoutePath(url)
+export function matchRoute(routes: Route[], url: string): Route | undefined {
+  const path = normalizeRoutePath(safeDecodeUrl(url))
 
-  for (const route of sortRoutes(routes)) {
-    const params = matchRoutePath(route.path, normalizedUrl)
-
-    if (params) return { params: { ...route.params, ...params }, route }
-  }
+  return routes.find((route) => route.path === path)
 }
 
-export function createPageContext<Props>(
-  route: Route<Props>,
-  params: RouteParams,
-  request?: Request
-): PageContext<Props> {
-  const url = request
-    ? new URL(request.url)
-    : new URL(route.path, "https://sitex.local")
-
-  return {
-    params,
-    props: route.props,
-    request,
-    url,
+function safeDecodeUrl(url: string) {
+  try {
+    return decodeURI(url)
+  } catch {
+    return url
   }
 }
 
@@ -194,8 +123,7 @@ export function validateUniqueRoutePaths(routes: Route[]) {
   const seen = new Map<string, string>()
 
   for (const route of routes) {
-    const key = route.path
-    const previous = seen.get(key)
+    const previous = seen.get(route.path)
 
     if (previous) {
       throw new Error(
@@ -203,185 +131,42 @@ export function validateUniqueRoutePaths(routes: Route[]) {
       )
     }
 
-    seen.set(key, route.file)
+    seen.set(route.path, route.file)
   }
 }
 
-function createRoute<Props>(route: Omit<Route<Props>, "score">): Route<Props> {
-  return {
-    ...route,
-    path: normalizeRoutePath(route.path),
-    score: scoreRoute(route.path),
+export function pageFileToRoutePath(file: string) {
+  if (/\[[^\]]*\]/.test(file)) {
+    throw new Error(
+      `Page "${file}" uses a dynamic segment. Sitex routes are static MDX files.`
+    )
   }
-}
 
-function pageFileToRoutePattern(file: string) {
   const route = file
     .replace(/^src\/pages/, "")
-    .replace(/\/index\.(tsx|mdx)$/, "/")
-    .replace(/\.(tsx|mdx)$/, "")
+    .replace(/\/index\.mdx$/, "/")
+    .replace(/\.mdx$/, "")
 
   return normalizeRoutePath(route || "/")
 }
 
-function normalizeRoutePath(path: string) {
+export function normalizeRoutePath(path: string) {
   if (!path || path === "/") return "/"
   return `/${path.replace(/^\/+|\/+$/g, "")}`
 }
 
-function readParamNames(path: string) {
-  return [...path.matchAll(/\[([^\]]+)\]/g)].map((match) => {
-    const name = match[1]
-
-    if (!name || name.startsWith("...")) {
-      throw new Error(`Unsupported route param "[${name}]" in "${path}".`)
-    }
-
-    return name
-  })
-}
-
-function validateStaticPath(
-  file: string,
-  pattern: string,
-  paramNames: string[],
-  path: StaticPath,
-  index: number
+export function resolveRouteLocale(
+  routePath: string,
+  locales: readonly string[],
+  defaultLocale: string
 ) {
-  if (!path || typeof path !== "object" || Array.isArray(path)) {
-    throw new Error(`Static path ${index} in "${file}" must be an object.`)
-  }
+  const segment = routePath.split("/").find(Boolean)
 
-  validateJsonValue(path.props, `${file} paths[${index}].props`, new WeakSet())
-
-  const params = path.params
-
-  if (!params || typeof params !== "object" || Array.isArray(params)) {
-    throw new Error(
-      `Static path ${index} in "${file}" must include a params object.`
-    )
-  }
-
-  const actual = Object.keys(params).sort()
-  const expected = [...paramNames].sort()
-
-  if (actual.join("\0") !== expected.join("\0")) {
-    throw new Error(
-      `Static path ${index} in "${file}" must provide params { ${expected.join(", ")} } for "${pattern}".`
-    )
-  }
-
-  for (const [key, value] of Object.entries(params)) {
-    if (typeof value !== "string" || value.length === 0) {
-      throw new Error(
-        `Static path ${index} in "${file}" param "${key}" must be a non-empty string.`
-      )
-    }
-  }
+  return segment && locales.includes(segment) ? segment : defaultLocale
 }
 
-function fillRoutePattern(pattern: string, params: RouteParams) {
-  return pattern.replace(/\[([^\]]+)\]/g, (_match, key: string) =>
-    encodeURIComponent(params[key] ?? "")
-  )
-}
+export function routePathToPublicPath(path: string, trailingSlash: boolean) {
+  if (path === "/") return "/"
 
-function matchRoutePath(
-  pattern: string,
-  path: string
-): RouteParams | undefined {
-  const paramNames = readParamNames(pattern)
-
-  if (paramNames.length === 0) {
-    return normalizeRoutePath(pattern) === normalizeRoutePath(path)
-      ? {}
-      : undefined
-  }
-
-  const patternSegments = normalizeRoutePath(pattern).split("/")
-  const pathSegments = normalizeRoutePath(path).split("/")
-
-  if (patternSegments.length !== pathSegments.length) return
-
-  const params: RouteParams = {}
-
-  for (let index = 0; index < patternSegments.length; index++) {
-    const patternSegment = patternSegments[index]
-    const pathSegment = pathSegments[index]
-    const paramMatch = patternSegment.match(/^\[([^\]]+)\]$/)
-
-    if (paramMatch) {
-      params[paramMatch[1]] = decodeURIComponent(pathSegment)
-      continue
-    }
-
-    if (patternSegment !== pathSegment) return
-  }
-
-  return params
-}
-
-function scoreRoute(path: string) {
-  return normalizeRoutePath(path)
-    .split("/")
-    .reduce((score, segment) => {
-      if (!segment) return score
-      return score + (segment.startsWith("[") ? 1 : 10)
-    }, 0)
-}
-
-function validateJsonValue(
-  value: unknown,
-  path: string,
-  seen: WeakSet<object>
-) {
-  if (value === undefined || value === null) return
-
-  const valueType = typeof value
-
-  if (valueType === "string" || valueType === "boolean") return
-
-  if (valueType === "number") {
-    if (!Number.isFinite(value)) {
-      throw new Error(`${path} contains a non-finite number.`)
-    }
-
-    return
-  }
-
-  if (valueType !== "object") {
-    throw new Error(`${path} must be JSON-serializable.`)
-  }
-
-  const objectValue = value as Record<string | symbol, unknown>
-
-  if (seen.has(objectValue)) {
-    throw new Error(`${path} contains a circular value.`)
-  }
-
-  seen.add(objectValue)
-
-  if (Array.isArray(objectValue)) {
-    objectValue.forEach((item, index) => {
-      validateJsonValue(item, `${path}[${index}]`, seen)
-    })
-    seen.delete(objectValue)
-    return
-  }
-
-  const prototype = Object.getPrototypeOf(objectValue)
-
-  if (prototype !== Object.prototype && prototype !== null) {
-    throw new Error(`${path} must only contain plain objects and arrays.`)
-  }
-
-  for (const key of Reflect.ownKeys(objectValue)) {
-    if (typeof key === "symbol") {
-      throw new Error(`${path} cannot contain symbol keys.`)
-    }
-
-    validateJsonValue(objectValue[key], `${path}.${key}`, seen)
-  }
-
-  seen.delete(objectValue)
+  return trailingSlash ? `${path.replace(/\/$/, "")}/` : path.replace(/\/$/, "")
 }
