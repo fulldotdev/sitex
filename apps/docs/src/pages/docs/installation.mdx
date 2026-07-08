@@ -25,11 +25,16 @@ export default defineConfig({
 ```json
 // tsconfig.json
 {
-  "extends": "@fulldotdev/sitex/tsconfig"
+  "extends": "@fulldotdev/sitex/tsconfig",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
 }
 ```
 
-The Sitex tsconfig brings the includes, the generated `.sitex` types, and the `@/*` alias. Add `.sitex` to `.gitignore` — Sitex regenerates it on every run.
+The Sitex tsconfig brings the includes and the generated `.sitex` types. The `@/*` alias maps imports to `src/`; Vite picks it up from the tsconfig automatically. Add `.sitex` to `.gitignore` — Sitex regenerates it on every run.
 
 Builds need an absolute site URL for canonical, sitemap, and robots output. Deploy platforms provide one automatically (Netlify `URL`, `VERCEL_PROJECT_PRODUCTION_URL`, `SITE_URL`, and similar); otherwise pass `sitex({ site: { url: "https://example.com" } })`.
 

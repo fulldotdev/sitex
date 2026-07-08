@@ -207,7 +207,6 @@
       nav,
       figure,
       details,
-      .docs-code-block,
       pre,
       small,
       dl,
@@ -242,7 +241,6 @@
       nav,
       figure,
       details,
-      .docs-code-block,
       pre,
       small,
       dl,
@@ -459,88 +457,23 @@
     @apply overflow-x-auto rounded-xl border border-border bg-muted/60 p-4 text-sm;
   }
 
-  [data-slot="typography"] > .docs-code-block {
-    @apply relative overflow-hidden rounded-md border border-border bg-muted/40 shadow-xs;
+  [data-slot="code"] pre {
+    @apply leading-[var(--text-sm--line-height)];
   }
 
-  [data-slot="typography"] .docs-code-block [data-slot="button"] {
-    @apply absolute top-2 right-2 z-10 bg-background/70 shadow-xs backdrop-blur;
-  }
-
-  [data-slot="typography"] > .docs-code-block > .docs-code-block-content {
-    @apply overflow-x-auto;
-  }
-
-  [data-slot="typography"] > .docs-code-block > .docs-code-block-content > pre,
-  [data-slot="typography"]
-    > .docs-code-block
-    > .docs-code-block-content
-    > pre.shiki {
-    @apply m-0 min-w-max rounded-none border-0 bg-transparent p-4 pr-14 text-sm leading-[var(--text-sm--line-height)];
-    font-family: var(--font-mono);
-    background-color: transparent !important;
-  }
-
-  [data-slot="typography"]
-    > .docs-code-block
-    > .docs-code-block-content
-    > pre
-    code,
-  [data-slot="typography"]
-    > .docs-code-block
-    > .docs-code-block-content
-    > pre.shiki
-    code {
+  [data-slot="code"] pre code {
     @apply text-sm leading-[var(--text-sm--line-height)];
     color: var(--shiki-light, var(--foreground));
   }
 
-  .dark
-    [data-slot="typography"]
-    > .docs-code-block
-    > .docs-code-block-content
-    > pre {
-    color: var(--shiki-dark, var(--foreground)) !important;
-  }
-
-  .dark
-    [data-slot="typography"]
-    > .docs-code-block
-    > .docs-code-block-content
-    > pre
-    code,
-  .dark
-    [data-slot="typography"]
-    > .docs-code-block
-    > .docs-code-block-content
-    > pre.shiki
-    code {
-    color: var(--shiki-dark, var(--foreground)) !important;
-  }
-
-  .dark
-    [data-slot="typography"]
-    > .docs-code-block
-    > .docs-code-block-content
-    > pre
-    span[style*="--shiki-dark"] {
-    color: var(--shiki-dark) !important;
+  .dark [data-slot="code"] pre span[style*="--shiki-dark"] {
     font-style: var(--shiki-dark-font-style, inherit) !important;
     font-weight: var(--shiki-dark-font-weight, inherit) !important;
     text-decoration: var(--shiki-dark-text-decoration, inherit) !important;
   }
 
-  .dark
-    [data-slot="typography"]
-    > .docs-code-block
-    > .docs-code-block-content
-    > pre
-    span[style*="--shiki-dark:#6A737D"] {
+  .dark [data-slot="code"] pre span[style*="--shiki-dark:#6A737D"] {
     color: #8b949e !important;
-  }
-
-  [data-slot="typography"] > .docs-code-block svg {
-    @apply size-4;
   }
 
   [data-slot="typography"] > small {

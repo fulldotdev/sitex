@@ -53,11 +53,16 @@ Import it from layouts with `sitex:globals`. Keep Vite `site` config for stable 
 
 ```json
 {
-  "extends": "@fulldotdev/sitex/tsconfig"
+  "extends": "@fulldotdev/sitex/tsconfig",
+  "compilerOptions": {
+    "paths": {
+      "@/*": ["./src/*"]
+    }
+  }
 }
 ```
 
-The shared config brings the includes, the generated `.sitex` types, and the `@/*` alias.
+The shared config brings the includes and the generated `.sitex` types; the `@/*` alias maps imports to `src/`.
 
 ## First Page
 

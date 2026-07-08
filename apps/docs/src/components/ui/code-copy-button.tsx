@@ -1,13 +1,15 @@
-import { CheckIcon, CopyIcon } from "lucide-react"
 import { useState } from "react"
 
-import { Button } from "@/components/ui/button"
+import { CheckIcon, CopyIcon } from "lucide-react"
 
-type CodeBlockCopyButtonProps = {
+import { cn } from "@/lib/utils"
+
+type CodeCopyButtonProps = {
   code: string
+  className?: string
 }
 
-function CodeBlockCopyButton({ code }: CodeBlockCopyButtonProps) {
+function CodeCopyButton({ code, className }: CodeCopyButtonProps) {
   const [copied, setCopied] = useState(false)
 
   async function copyCode() {
@@ -29,17 +31,18 @@ function CodeBlockCopyButton({ code }: CodeBlockCopyButtonProps) {
   }
 
   return (
-    <Button
+    <button
       aria-label={copied ? "Copied" : "Copy code"}
-      className="text-muted-foreground hover:text-foreground"
+      className={cn(
+        "inline-flex size-8 items-center justify-center rounded-md bg-background/70 text-muted-foreground shadow-xs backdrop-blur transition-colors hover:text-foreground [&_svg]:size-4",
+        className
+      )}
       onClick={copyCode}
-      size="icon-sm"
       type="button"
-      variant="ghost"
     >
       {copied ? <CheckIcon /> : <CopyIcon />}
-    </Button>
+    </button>
   )
 }
 
-export { CodeBlockCopyButton }
+export { CodeCopyButton }

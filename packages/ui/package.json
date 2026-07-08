@@ -9,6 +9,10 @@
     "check": "vp check"
   },
   "dependencies": {
+    "@shikijs/core": "^4.3.1",
+    "@shikijs/engine-javascript": "^4.3.1",
+    "@shikijs/langs": "^4.3.1",
+    "@shikijs/themes": "^4.3.1",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "lucide-react": "catalog:",

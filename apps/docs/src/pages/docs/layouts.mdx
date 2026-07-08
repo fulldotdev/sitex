@@ -71,16 +71,20 @@ For JSON-LD, render a `script type="application/ld+json"` anywhere in the layout
 
 ## MDX Components
 
-Override Markdown elements globally in the plugin config, or per layout with an `mdxComponents` export. Layout entries win. Use this for elements that need more than CSS — like code blocks with syntax highlighting and a copy button.
+Override Markdown elements globally in the plugin config, or per layout with an `mdxComponents` export. Layout entries win. Use this for elements that need more than CSS — the main case is code blocks with syntax highlighting and a copy button, which [Sitex UI](/docs/ui) ships as the `code` component:
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/code.json
+```
 
 ```ts
 // vite.config.ts
-sitex({ mdx: { components: { pre: "@/components/mdx/pre" } } })
+sitex({ mdx: { components: { pre: "@/components/ui/code" } } })
 ```
 
 ```tsx
-// src/layouts/doc.tsx
-import MdxPre from "@/components/mdx/pre"
+// src/layouts/doc.tsx — per-layout override, wins over the config
+import CodePre from "@/components/ui/code"
 
-export const mdxComponents = { pre: MdxPre }
+export const mdxComponents = { pre: CodePre }
 ```

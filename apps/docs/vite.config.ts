@@ -14,7 +14,7 @@ export default defineConfig({
       },
       mdx: {
         components: {
-          pre: "@/components/mdx-components/pre",
+          pre: "@/components/ui/code",
         },
       },
     }),

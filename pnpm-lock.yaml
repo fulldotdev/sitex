@@ -233,6 +233,18 @@ importers:
 
   packages/ui:
     dependencies:
+      '@shikijs/core':
+        specifier: ^4.3.1
+        version: 4.3.1
+      '@shikijs/engine-javascript':
+        specifier: ^4.3.1
+        version: 4.3.1
+      '@shikijs/langs':
+        specifier: ^4.3.1
+        version: 4.3.1
+      '@shikijs/themes':
+        specifier: ^4.3.1
+        version: 4.3.1
       class-variance-authority:
         specifier: 'catalog:'
         version: 0.7.1
