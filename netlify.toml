@@ -55,3 +55,23 @@ status = 301
 from = "/docs/rendering"
 to = "/docs/components"
 status = 301
+
+[[redirects]]
+from = "/docs/ui"
+to = "/docs/components"
+status = 301
+
+[[redirects]]
+from = "/docs/ui/installation"
+to = "/docs/components"
+status = 301
+
+[[redirects]]
+from = "/docs/ui/components"
+to = "/docs/components"
+status = 301
+
+[[redirects]]
+from = "/docs/ui/*"
+to = "/docs/components/:splat"
+status = 301

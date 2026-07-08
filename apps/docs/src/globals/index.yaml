@@ -6,12 +6,10 @@ header:
   githubRepo: fulldotdev/sitex
   navigation:
     - href: /docs
-      label: Framework
-    - href: /docs/ui
-      label: UI
+      label: Docs
 sidebar:
   sections:
-    - label: Framework
+    - label: Docs
       href: /docs
       navigation:
         - label: Docs
@@ -26,42 +24,31 @@ sidebar:
               label: Layouts
             - href: /docs/components
               label: Components
-    - label: UI
-      href: /docs/ui
-      navigation:
-        - label: Docs
-          links:
-            - href: /docs/ui
-              label: Introduction
-            - href: /docs/ui/installation
-              label: Installation
-            - href: /docs/ui/components
-              label: Components
         - label: Components
           links:
-            - href: /docs/ui/banner
+            - href: /docs/components/banner
               label: Banner
-            - href: /docs/ui/code
+            - href: /docs/components/code
               label: Code
-            - href: /docs/ui/gradient
+            - href: /docs/components/gradient
               label: Gradient
-            - href: /docs/ui/header
+            - href: /docs/components/header
               label: Header
-            - href: /docs/ui/layout
+            - href: /docs/components/layout
               label: Layout
-            - href: /docs/ui/marquee
+            - href: /docs/components/marquee
               label: Marquee
-            - href: /docs/ui/price
+            - href: /docs/components/price
               label: Price
-            - href: /docs/ui/rating
+            - href: /docs/components/rating
               label: Rating
-            - href: /docs/ui/section
+            - href: /docs/components/section
               label: Section
-            - href: /docs/ui/theme-toggle
+            - href: /docs/components/theme-toggle
               label: Theme Toggle
-            - href: /docs/ui/tile
+            - href: /docs/components/tile
               label: Tile
-            - href: /docs/ui/toc
+            - href: /docs/components/toc
               label: Table of Contents
-            - href: /docs/ui/typography
+            - href: /docs/components/typography
               label: Typography
