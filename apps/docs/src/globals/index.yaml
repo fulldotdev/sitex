@@ -35,6 +35,8 @@ sidebar:
               label: Introduction
             - href: /docs/ui/installation
               label: Installation
+            - href: /docs/ui/components
+              label: Components
         - label: Components
           links:
             - href: /docs/ui/banner

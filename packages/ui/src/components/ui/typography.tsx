@@ -22,7 +22,45 @@ function Typography<T extends React.ElementType = "div">({
     <Component
       data-slot="typography"
       data-size={size}
-      className={cn("text-base text-foreground", className)}
+      className={cn(
+        "text-base text-foreground",
+        // Vertical rhythm between direct children.
+        "[&>:is(p,blockquote,ul,ol,table,div,section,article,aside,nav,figure,details,pre,small,dl,img,picture,video,iframe):not(:first-child)]:mt-6",
+        "[&>h2:not(:first-child)]:mt-10",
+        "[&>:is(h3,h4):not(:first-child)]:mt-8",
+        "[&>:is(h1,h2,h3,h4)+:is(p,blockquote,ul,ol,table,div,section,article,aside,nav,figure,details,pre,small,dl,img,picture,video,iframe)]:mt-4",
+        "[&>hr]:my-8 [&>hr]:border-border",
+        // Raw elements (e.g. rendered MDX) get the same styling the
+        // Typography* components carry themselves; [data-slot] elements are
+        // excluded so those components stay in charge of their own styling.
+        "[&_h1:not([data-slot])]:scroll-m-20 [&_h1:not([data-slot])]:font-semibold [&_h1:not([data-slot])]:tracking-tight [&_h1:not([data-slot])]:text-balance",
+        "[&[data-size=sm]_h1:not([data-slot])]:text-3xl [&[data-size=default]_h1:not([data-slot])]:text-4xl [&[data-size=lg]_h1:not([data-slot])]:text-5xl",
+        "[&_h2:not([data-slot])]:scroll-m-20 [&_h2:not([data-slot])]:font-semibold [&_h2:not([data-slot])]:tracking-tight",
+        "[&[data-size=sm]_h2:not([data-slot])]:text-2xl [&[data-size=default]_h2:not([data-slot])]:text-3xl [&[data-size=lg]_h2:not([data-slot])]:text-4xl",
+        "[&_h3:not([data-slot])]:scroll-m-20 [&_h3:not([data-slot])]:font-semibold [&_h3:not([data-slot])]:tracking-tight",
+        "[&[data-size=sm]_h3:not([data-slot])]:text-xl [&[data-size=default]_h3:not([data-slot])]:text-2xl [&[data-size=lg]_h3:not([data-slot])]:text-3xl",
+        "[&_h4:not([data-slot])]:scroll-m-20 [&_h4:not([data-slot])]:font-semibold [&_h4:not([data-slot])]:tracking-tight",
+        "[&[data-size=sm]_h4:not([data-slot])]:text-lg [&[data-size=default]_h4:not([data-slot])]:text-xl [&[data-size=lg]_h4:not([data-slot])]:text-2xl",
+        "[&_a:not([data-slot])]:font-medium [&_a:not([data-slot])]:text-primary [&_a:not([data-slot])]:underline [&_a:not([data-slot])]:underline-offset-4",
+        "[&_p:not([data-slot])]:text-base [&_p:not([data-slot])]:leading-7",
+        "[&_blockquote:not([data-slot])]:border-l-2 [&_blockquote:not([data-slot])]:pl-6 [&_blockquote:not([data-slot])]:text-base [&_blockquote:not([data-slot])]:italic",
+        "[&_:is(ul,ol):not([data-slot])]:ml-6 [&_:is(ul,ol):not([data-slot])]:text-base [&_ul:not([data-slot])]:list-disc [&_ol:not([data-slot])]:list-decimal [&_:is(ul,ol)>li:not([data-slot])]:mt-2",
+        "[&>small]:block [&>small]:text-sm [&>small]:leading-none [&>small]:font-medium",
+        "[&_:not(pre)>code:not([data-slot])]:relative [&_:not(pre)>code:not([data-slot])]:rounded [&_:not(pre)>code:not([data-slot])]:bg-muted [&_:not(pre)>code:not([data-slot])]:px-[0.3rem] [&_:not(pre)>code:not([data-slot])]:py-[0.2rem] [&_:not(pre)>code:not([data-slot])]:font-mono [&_:not(pre)>code:not([data-slot])]:text-sm",
+        "[&_table:not([data-slot])]:w-full [&_table:not([data-slot])]:caption-bottom [&_table:not([data-slot])]:border-spacing-0 [&_table:not([data-slot])]:overflow-x-auto [&_table:not([data-slot])]:rounded-xl [&_table:not([data-slot])]:border [&_table:not([data-slot])]:border-border [&_table:not([data-slot])]:text-sm",
+        "[&_tr:not([data-slot])]:border-b [&_tr:not([data-slot])]:transition-colors [&_tbody_tr:not([data-slot]):last-child]:border-b-0",
+        "[&_th:not([data-slot])]:h-10 [&_th:not([data-slot])]:px-2 [&_th:not([data-slot])]:text-left [&_th:not([data-slot])]:align-middle [&_th:not([data-slot])]:text-sm [&_th:not([data-slot])]:font-medium [&_th:not([data-slot])]:whitespace-nowrap [&_th:not([data-slot])]:text-foreground",
+        "[&_th[align=center]:not([data-slot])]:text-center [&_th[align=right]:not([data-slot])]:text-right",
+        "[&_td:not([data-slot])]:p-2 [&_td:not([data-slot])]:text-left [&_td:not([data-slot])]:align-middle [&_td:not([data-slot])]:text-sm [&_td:not([data-slot])]:whitespace-nowrap",
+        "[&_td[align=center]:not([data-slot])]:text-center [&_td[align=right]:not([data-slot])]:text-right",
+        "[&_table:not([data-slot])_:not(pre)>code:not([data-slot])]:rounded-md [&_table:not([data-slot])_:not(pre)>code:not([data-slot])]:leading-5",
+        // Code blocks, including shiki-highlighted MDX output.
+        "[&>pre]:overflow-x-auto [&>pre]:rounded-xl [&>pre]:border [&>pre]:border-border [&>pre]:bg-muted/60 [&>pre]:p-4 [&>pre]:text-sm",
+        "[&>pre.shiki]:leading-(--text-sm--line-height) [&>pre.shiki_code]:text-inherit",
+        "dark:[&>pre.shiki]:[color:var(--shiki-dark,var(--foreground))]",
+        "dark:[&>pre.shiki_span[style*='--shiki-dark']]:[color:var(--shiki-dark)] dark:[&>pre.shiki_span[style*='--shiki-dark']]:[font-style:var(--shiki-dark-font-style,inherit)] dark:[&>pre.shiki_span[style*='--shiki-dark']]:[font-weight:var(--shiki-dark-font-weight,inherit)] dark:[&>pre.shiki_span[style*='--shiki-dark']]:[text-decoration:var(--shiki-dark-text-decoration,inherit)]",
+        className
+      )}
       {...props}
     />
   )
