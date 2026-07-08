@@ -59,13 +59,3 @@ function normalizeModuleId(source: string, importer: string, root: string) {
 
   return `/${path.relative(root, withExtension).replaceAll(path.sep, "/")}`
 }
-
-export {
-  createHydrationEntry as createIsland,
-  createVirtualHydrationCode as createVirtualIslandsCode,
-  registerHydrationEntry as registerIsland,
-  resolvedVirtualHydrationId as resolvedVirtualIslandsId,
-  virtualHydrationId as virtualIslandsId,
-  type HydrationEntry as Island,
-  type HydrationRegistry as IslandRegistry,
-}

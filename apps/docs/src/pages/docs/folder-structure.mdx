@@ -2,17 +2,21 @@
 layout: "doc"
 title: "Folder structure"
 description: "Required folders and recommended project shape."
-order: 11
 ---
 
 ```text
 src/
+  assets/
+    og.png
+  globals/
+    index.yaml
+  index.css
   pages/
-    index.tsx
+    index.mdx
     docs/
       index.mdx
   layouts/
-    base.tsx
+    default.tsx
     doc.tsx
     post.tsx
   components/
@@ -26,18 +30,20 @@ src/
 
 ## Required Folders
 
-Sitex requires `src/pages`. TSX and MDX files in this folder become routes.
+Sitex requires two folders. Global CSS and global site chrome have standard app locations.
 
-MDX pages also use `src/layouts`.
+1. `src/index.css` is the recommended global stylesheet. Import it from `src/layouts/base.tsx`.
+2. `src/globals/index.yaml` holds global content used by layouts, such as logo, header navigation, sidebar navigation, footer links, and labels. Additional files like `nl.yaml` define locale variants served under `/nl` routes.
+3. `src/pages` holds MDX pages. Every `.mdx` file becomes a route. TSX files are not allowed here.
+4. `src/layouts` holds TSX layouts. `layout: "doc"` uses `src/layouts/doc.tsx`, `layout: "blog/post"` uses `src/layouts/blog/post.tsx`.
 
-1. `layout: "doc"` uses `src/layouts/doc.tsx`.
-2. `layout: "post"` uses `src/layouts/post.tsx`.
+## Assets
+
+Put app-owned images in `src/assets`. Use `public/` only for static files that must keep an exact public URL. Sitex generates `/favicon.svg` unless the app provides `public/favicon.svg`.
 
 ## Recommended Shape
 
-Keep routes thin. Routes choose layouts and provide page content.
-
-Use `src/layouts/base.tsx` for shared metadata, navigation, and site chrome.
+Keep pages thin: frontmatter facts plus Markdown content. Layouts own structure and chrome. Put shared chrome content in `src/globals/index.yaml`, then import `sitex:globals` from layouts and blocks.
 
 Use `src/components` for reusable implementation pieces. This folder is a convention, not a Sitex requirement.
 
@@ -47,4 +53,4 @@ Place blocks in `src/components/blocks`. Blocks are reusable page sections, such
 
 ## UI
 
-Place UI components in `src/components/ui`. UI components are low-level design system pieces, such as buttons, typography, inputs, breadcrumbs, and sidebar primitives.
+Place UI components in `src/components/ui`. UI components are low-level design system pieces, such as buttons, typography, inputs, and sidebar primitives.

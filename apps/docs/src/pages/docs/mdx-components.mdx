@@ -2,7 +2,6 @@
 layout: "doc"
 title: "MDX components"
 description: "Customize Markdown elements rendered inside MDX pages."
-order: 7
 ---
 
 ## Overview
@@ -15,10 +14,13 @@ import { sitex } from "@fulldotdev/sitex/plugin"
 import react from "@vitejs/plugin-react"
 
 export default defineConfig({
-  appType: "custom",
   plugins: [
     react(),
     sitex({
+      site: {
+        name: "Example",
+        url: "https://example.com",
+      },
       mdx: {
         components: {
           pre: "@/components/mdx/pre",
@@ -61,7 +63,7 @@ export const mdxComponents = {
   pre: MdxPre,
 }
 
-export default function DocsLayout({ children }) {
+export default function DocsLayout({ children }: LayoutProps) {
   return <main>{children}</main>
 }
 ```

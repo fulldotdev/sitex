@@ -1,0 +1,134 @@
+---
+layout: "doc"
+title: "SEO and head"
+description: "Render document metadata with layout head props."
+---
+
+## Overview
+
+Sitex owns routing, Vite HTML transforms, assets, islands, sitemap, robots.txt, canonical defaults, `noindex` robots, generated favicon, and the framework generator tag. Your app owns route metadata and passes content/SEO props to `LayoutHead`.
+
+## Site Config
+
+Sitex needs an absolute URL for sitemap and robots output. Set `site.url` explicitly, or let Sitex read a supported deploy-platform URL environment variable. App name, logo, navigation labels, and shared chrome belong in `src/globals/index.yaml`.
+
+Sitex reads these URL variables in order:
+
+1. `SITE_URL`
+2. `PUBLIC_SITE_URL`
+3. `PUBLIC_URL`
+4. `APP_URL`
+5. `BASE_URL`
+6. `URL` — Netlify production/main site URL
+7. `VERCEL_PROJECT_PRODUCTION_URL`
+8. `CF_PAGES_URL`
+9. `RENDER_EXTERNAL_URL`
+10. `RENDER_EXTERNAL_HOSTNAME`
+11. `RAILWAY_PUBLIC_DOMAIN`
+12. `KOYEB_PUBLIC_DOMAIN`
+13. `DEPLOY_PRIME_URL`
+14. `DEPLOY_URL`
+15. `VERCEL_BRANCH_URL`
+16. `VERCEL_URL`
+
+Host-only values such as Vercel, Railway, Koyeb, and Render hostname values get `https://` added.
+
+```ts
+import { defineConfig } from "vite-plus"
+import { sitex } from "@fulldotdev/sitex/plugin"
+import react from "@vitejs/plugin-react"
+
+export default defineConfig({
+  plugins: [
+    react(),
+    sitex({
+      site: {
+        url: "https://example.com",
+      },
+    }),
+  ],
+})
+```
+
+## Layout Head
+
+Use `LayoutHead` in your base layout.
+
+```tsx
+import type { LayoutProps } from "@fulldotdev/sitex"
+
+import { Layout, LayoutBody, LayoutHead } from "@/components/ui/layout"
+
+export default function DefaultLayout({
+  children,
+  description,
+  title,
+}: LayoutProps) {
+  return (
+    <Layout>
+      <LayoutHead title={title} description={description} />
+      <LayoutBody>{children}</LayoutBody>
+    </Layout>
+  )
+}
+```
+
+`LayoutHead` accepts flat props such as `title`, `description`, `image`, `type`, `publishedAt`, `updatedAt`, `twitterCard`, and `jsonLd`.
+
+## Framework Defaults
+
+Sitex adds these tags after rendering, unless your app already rendered the same tag:
+
+1. canonical link from `site.url` and the routed `path`
+2. Open Graph URL from the same canonical URL
+3. `<html lang>` from the globals filename
+4. charset and viewport
+5. robots `noindex` from `noindex: true`
+6. favicon link to `/favicon.svg`
+7. generator meta
+
+`canonical` frontmatter overrides the generated canonical. `noindex: true` also removes the page from `sitemap.xml`.
+
+Sitex generates `/favicon.svg` when the app does not provide `public/favicon.svg`. Configure it in `vite.config.ts`:
+
+```ts
+sitex({
+  favicon: {
+    text: "SX",
+    background: "#111827",
+    color: "#ffffff",
+  },
+})
+```
+
+Set `favicon: false` to disable generated favicon output and link injection.
+
+## Structured Data
+
+`jsonLd` is typed with `schema-dts`.
+
+```tsx
+import type { Article, WithContext } from "schema-dts"
+
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  headline: title,
+  description,
+  url,
+} satisfies WithContext<Article>
+
+<LayoutHead title={title} description={description} jsonLd={jsonLd} />
+```
+
+## Sitemap And Robots
+
+`vp build` writes `sitemap.xml` with every page except pages with `noindex: true`. Pages whose `canonical` points to a different URL are excluded. Pages with `publishedAt` or `updatedAt` get a `<lastmod>` entry.
+
+If `public/` has its own `sitemap.xml` or `robots.txt`, Sitex leaves them alone. Otherwise it writes a `robots.txt` that allows crawling and points to the sitemap.
+
+## Overrides
+
+1. `canonical` can replace the derived canonical URL when content is republished.
+2. `noindex: true` removes a page from search engines and the sitemap.
+3. `image` can replace the default social image for one page.

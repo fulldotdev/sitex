@@ -15,12 +15,12 @@
     "release:publish": "vp run -r build && changeset publish"
   },
   "devDependencies": {
-    "@changesets/changelog-github": "^0.7.0",
-    "@changesets/cli": "^2.31.0",
-    "vite-plus": "^0.1.24"
+    "@changesets/changelog-github": "catalog:",
+    "@changesets/cli": "catalog:",
+    "vite-plus": "^0.2.3"
   },
   "engines": {
-    "node": ">=22.12.0"
+    "node": ">=22.18.0"
   },
   "packageManager": "pnpm@11.1.2"
 }

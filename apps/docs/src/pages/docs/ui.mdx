@@ -1,0 +1,58 @@
+---
+layout: "doc"
+title: "Sitex UI"
+description: "shadcn/ui additions for content sites, installed from the Sitex registry."
+---
+
+Sitex UI is a set of components built on the [shadcn/ui](https://ui.shadcn.com) conventions: Tailwind styling, `cn` from `@/lib/utils`, and your theme tokens. They are not an npm dependency. You install them from the Sitex registry and the source lands in your app under `src/components/ui`, where you own and edit it.
+
+## Install
+
+Add a component with the shadcn CLI:
+
+```bash
+pnpm dlx shadcn@latest add https://sitex.full.dev/r/section.json
+```
+
+This copies the component into `src/components/ui` and installs any dependencies it needs.
+
+## Components
+
+| Component      | Description                                                                                  |
+| -------------- | -------------------------------------------------------------------------------------------- |
+| `banner`       | Dismissable site-wide announcement banner.                                                   |
+| `gradient`     | Decorative gradient surface for hero and section backgrounds.                                |
+| `header`       | Site header with container and grouping primitives.                                          |
+| `layout`       | Document primitives for Sitex layouts: html, head with SEO meta and JSON-LD, body, and main. |
+| `marquee`      | Continuously scrolling strip for logos and quotes.                                           |
+| `price`        | Locale-aware price display with sale and discount formatting.                                |
+| `rating`       | Star rating display.                                                                         |
+| `section`      | Page section with consistent vertical rhythm and container.                                  |
+| `theme-toggle` | Light/dark theme provider and toggle button.                                                 |
+| `tile`         | Card-like tile and tile group for feature grids.                                             |
+| `toc`          | Table of contents navigation for page headings.                                              |
+| `typography`   | Prose typography primitives for MDX content.                                                 |
+
+## Layout
+
+`layout` is the recommended way to render the document in a Sitex base layout:
+
+```tsx
+import {
+  Layout,
+  LayoutBody,
+  LayoutHead,
+  LayoutMain,
+} from "@/components/ui/layout"
+
+export default function BaseLayout({ title, description, children }) {
+  return (
+    <Layout>
+      <LayoutHead title={title} description={description} />
+      <LayoutBody>
+        <LayoutMain>{children}</LayoutMain>
+      </LayoutBody>
+    </Layout>
+  )
+}
+```

@@ -116,12 +116,3 @@ function isReactElement(value: Record<string | symbol, unknown>) {
 function throwInvalidProp(path: string, reason: string): never {
   throw new Error(`Invalid Sitex island prop at ${path}: ${reason}.`)
 }
-
-export {
-  hydrationAttributes as islandAttributes,
-  hydrationModes as islandModes,
-  isHydrationMode as isIslandMode,
-  parseHydrationProps as parseIslandProps,
-  serializeHydrationProps as serializeIslandProps,
-  type HydrationMode as IslandMode,
-}

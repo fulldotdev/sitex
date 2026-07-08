@@ -13,49 +13,44 @@ declare module "virtual:sitex-routes" {
   export function getRoutes(): Promise<Route[]>
 }
 
-declare module "virtual:sitex-render" {
-  import type { Route } from "@fulldotdev/sitex"
-
-  type RenderOptions = {
-    assetTags?: string
-    islandClientPreamble?: string
-    islandClientSrc?: string
-  }
-
-  type RenderResult = {
-    html: string
-    params: Record<string, string>
-    route: Route
-  }
-
-  export function getRoutes(): Promise<Route[]>
-  export function render(
-    url: string,
-    options?: RenderOptions
-  ): Promise<RenderResult | undefined>
-  export function renderMatchedRoute(
-    route: Route,
-    params: Record<string, string>,
-    options?: RenderOptions
-  ): Promise<string>
-}
-
 declare module "sitex:pages" {
-  type JsonValue =
-    | string
-    | number
-    | boolean
-    | null
-    | JsonValue[]
-    | { [key: string]: JsonValue }
+  import type {
+    FaqQuestion,
+    JsonValue,
+    MarkdownHeading,
+    PageType,
+  } from "@fulldotdev/sitex"
 
   type Page = {
-    readonly path: string
-    readonly [key: string]: JsonValue
+    path: string
+    layout: string
+    title: string
+    description: string
+    type?: PageType
+    image?: string
+    canonical?: string
+    noindex?: boolean
+    publishedAt?: string
+    updatedAt?: string
+    author?: string
+    questions?: FaqQuestion[]
+    headings: MarkdownHeading[]
+    [key: string]: JsonValue | undefined
   }
 
   export function getPages(prefix?: string): Promise<Page[]>
   export function getPage(path: string): Promise<Page | undefined>
+}
+
+declare module "sitex:globals" {
+  export interface Globals {
+    readonly [key: string]: unknown
+  }
+
+  const globals: Globals
+  export const locales: Readonly<Record<string, Globals>>
+  export { globals }
+  export default globals
 }
 
 declare namespace React {

@@ -6,7 +6,7 @@
 
 - Add MDX pages with layout-based rendering, page data from MDX frontmatter, and configurable MDX components.
 
-  Keep TSX and MDX routes static, with explicit dynamic static paths for generated HTML output.
+  Keep pages static and MDX-only, with TSX layouts and components for structure.
 
   Improve island rendering with `client:load`, `client:only`, `client:visible`, `client:idle`, and `client:media`.
 

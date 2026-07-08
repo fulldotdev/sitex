@@ -1,0 +1,155 @@
+---
+layout: "doc"
+title: "Layouts"
+description: "Render pages with TSX layouts and typed props."
+---
+
+## Overview
+
+Layouts are TSX files in `src/layouts`. A page selects its layout with the `layout` frontmatter field: `layout: "doc"` renders with `src/layouts/doc.tsx`.
+
+A layout receives one props object. Sitex provides `path`, `url`, `locale`, `headings`, and `children`; frontmatter fields are included in the same object. Sitex-provided props cannot be defined in frontmatter.
+
+```tsx
+import type { LayoutProps } from "@fulldotdev/sitex"
+
+export default function PostLayout({
+  title,
+  description,
+  children,
+}: LayoutProps) {
+  return (
+    <article>
+      <h1>{title}</h1>
+      <p>{description}</p>
+      {children}
+    </article>
+  )
+}
+```
+
+## Typed Props
+
+`LayoutProps` includes the standard page schema. Pass a type argument for extra frontmatter fields.
+
+```tsx
+import type { LayoutProps } from "@fulldotdev/sitex"
+
+type DocData = {
+  badge?: string
+}
+
+export default function DocLayout({
+  title,
+  badge,
+  children,
+}: LayoutProps<DocData>) {
+  return (
+    <main>
+      <h1>{title}</h1>
+      {badge && <span>{badge}</span>}
+      {children}
+    </main>
+  )
+}
+```
+
+Sitex typechecks every page against its layout. It writes one generated file per page to `.sitex/typecheck`, so `tsc` reports frontmatter that does not match the layout props.
+
+## Path And Headings
+
+`path` is the page route. `url` is the absolute page URL. `locale` comes from the globals filename. `headings` is the list of Markdown headings with `href`, `id`, `depth`, and `label` — use it for table-of-contents UI.
+
+```tsx
+import type { LayoutProps } from "@fulldotdev/sitex"
+
+export default function DocsLayout({
+  title,
+  path,
+  headings,
+  children,
+}: LayoutProps) {
+  return (
+    <main>
+      <h1>{title}</h1>
+      <nav>
+        {headings?.map((heading) => (
+          <a href={heading.href} key={heading.id}>
+            {heading.label}
+          </a>
+        ))}
+      </nav>
+      {children}
+    </main>
+  )
+}
+```
+
+## Document Tags
+
+Use `LayoutHead` for document metadata. Sitex handles Vite transforms, assets, static output, and island scripts.
+
+```tsx
+import type { LayoutProps } from "@fulldotdev/sitex"
+
+import { Layout, LayoutBody, LayoutHead } from "@/components/ui/layout"
+
+export default function DocLayout({
+  children,
+  description,
+  title,
+}: LayoutProps) {
+  return (
+    <Layout>
+      <LayoutHead title={title} description={description} />
+      <LayoutBody>{children}</LayoutBody>
+    </Layout>
+  )
+}
+```
+
+Global styles belong in `src/index.css`.
+
+## Global Content
+
+Put global chrome content in `src/globals/index.yaml`, then import `sitex:globals` from layouts. Use this for navigation, logo labels, footer links, repository links, and other shared site content.
+
+```yaml
+name: My Site
+logo:
+  label: My Site
+  href: /
+header:
+  navigation:
+    - label: Docs
+      href: /docs
+```
+
+```tsx
+import globals from "sitex:globals"
+
+export default function DefaultLayout({ children }: LayoutProps) {
+  return (
+    <>
+      <header>
+        <a href={globals.logo.href}>{globals.logo.label}</a>
+      </header>
+      <main>{children}</main>
+    </>
+  )
+}
+```
+
+Keep metadata in the Vite `site` config. Keep display content in `src/globals/index.yaml`.
+
+## MDX Components
+
+A layout can override MDX components for its pages with an `mdxComponents` export. Read [MDX components](/docs/mdx-components).
+
+```tsx
+import MdxPre from "@/components/mdx-components/pre"
+
+export const mdxComponents = {
+  pre: MdxPre,
+}
+```

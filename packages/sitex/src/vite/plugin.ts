@@ -8,16 +8,13 @@ import type {
   PreviewServer,
   ResolvedConfig,
   UserConfig,
+  ViteBuilder,
   ViteDevServer,
 } from "vite-plus"
-import {
-  createServer,
-  isRunnableDevEnvironment,
-  normalizePath,
-} from "vite-plus"
+import { isRunnableDevEnvironment, normalizePath } from "vite-plus"
 
 import { randomUUID } from "node:crypto"
-import { mkdirSync, readFileSync, writeFileSync } from "node:fs"
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs"
 import {
   access,
   mkdir,
@@ -27,7 +24,7 @@ import {
   writeFile,
 } from "node:fs/promises"
 import path from "node:path"
-import { fileURLToPath } from "node:url"
+import { fileURLToPath, pathToFileURL } from "node:url"
 
 import fg from "fast-glob"
 import { defineHastPlugin, mdxToJs } from "satteri"
@@ -43,46 +40,49 @@ import {
   virtualHydrationId,
   type HydrationRegistry,
 } from "../hydration/registry.ts"
+import { escapeHtmlAttribute as escapeXml } from "../render/html.ts"
+import type { RenderConfig } from "../render/render.tsx"
+import { validatePageFrontmatter } from "../router/frontmatter.ts"
+import {
+  matchRoute,
+  pageFileToRoutePath,
+  resolveRouteLocale,
+  routePathToPublicPath,
+  type JsonValue,
+  type MarkdownHeading,
+  type Route,
+} from "../router/runtime.ts"
+import {
+  resolveSiteConfig,
+  type ResolvedSiteConfig,
+  type SiteConfig,
+} from "../site/config.ts"
 
 const packageRoot = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
 const packageSourceExtension = path.extname(fileURLToPath(import.meta.url))
 const islandClientInput = normalizePath(packageFile("hydration/client", "tsx"))
 const virtualRoutesId = "virtual:sitex-routes"
 const resolvedVirtualRoutesId = `\0${virtualRoutesId}`
-const virtualRenderId = "virtual:sitex-render"
-const resolvedVirtualRenderId = `\0${virtualRenderId}`
 const virtualPagesId = "sitex:pages"
 const resolvedVirtualPagesId = `\0${virtualPagesId}`
-const pagesTypesFile = ".sitex/pages.d.ts"
+const virtualGlobalsId = "sitex:globals"
+const resolvedVirtualGlobalsId = `\0${virtualGlobalsId}`
 const clientBuildDir = ".sitex/client"
 const mdxTypecheckDir = ".sitex/typecheck"
+const ssrBuildDir = ".sitex/ssr"
+const globalsDir = "src/globals"
 
-type JsonValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JsonValue[]
-  | { [key: string]: JsonValue }
-
-type PageData = {
-  path: string
-  [key: string]: JsonValue
-}
-
-type PageDataRoute = {
-  file: string
-  path: string
-}
-
-type MarkdownHeading = {
-  depth: number
-  href: string
-  id: string
-  label: string
-}
+type RenderModule = typeof import("../render/render.tsx")
 
 export type SitexOptions = {
+  site?: SiteConfig
+  favicon?:
+    | false
+    | {
+        background?: string
+        color?: string
+        text?: string
+      }
   mdx?: {
     components?: Record<string, string>
   }
@@ -90,6 +90,15 @@ export type SitexOptions = {
 }
 
 type ResolvedSitexOptions = {
+  favicon:
+    | false
+    | {
+        background: string
+        color: string
+        text?: string
+      }
+  site: ResolvedSiteConfig
+  locales: string[]
   mdx: {
     components: Record<string, string>
   }
@@ -104,22 +113,39 @@ const isHtmlRequest = (req: Connect.IncomingMessage) => {
   return accept.includes("text/html") || accept.includes("*/*")
 }
 
-function shouldGenerateContentTypes() {
-  return process.env.SITEX_CONTENT !== "0"
-}
-
 export function sitex(options: SitexOptions = {}): PluginOption[] {
   const resolvedOptions: ResolvedSitexOptions = {
+    favicon: resolveFaviconOptions(options.favicon),
+    site: resolveSiteConfig(options.site),
+    locales: [],
     mdx: {
       components: validateMdxComponentImports(options.mdx?.components),
     },
     trailingSlash: options.trailingSlash ?? false,
   }
-  const plugins: PluginOption[] = [sitexPlugin(resolvedOptions)]
+  return [sitexPlugin(resolvedOptions), sitexMdxImportResolvePlugin()]
+}
 
-  plugins.push(sitexBuildInputPlugin())
+/**
+ * Vite's tsconfig-paths resolution only applies to TS/JS importers, so
+ * aliases like "@/components/alert" fail inside MDX pages. Retry failed
+ * resolutions from .mdx importers with a synthetic .tsx importer path.
+ */
+function sitexMdxImportResolvePlugin(): Plugin {
+  return {
+    name: "sitex:mdx-import-resolve",
 
-  return plugins
+    async resolveId(id, importer, options) {
+      if (!importer?.endsWith(".mdx")) return
+      if (id.startsWith(".") || id.startsWith("\0")) return
+
+      const resolved = await this.resolve(id, importer, options)
+
+      if (resolved) return resolved
+
+      return this.resolve(id, `${importer}.tsx`, options)
+    },
+  }
 }
 
 function validateMdxComponentImports(
@@ -153,22 +179,17 @@ function validateMdxComponentImports(
   return validated
 }
 
-function sitexBuildInputPlugin(): Plugin {
+function resolveFaviconOptions(options: SitexOptions["favicon"]) {
+  if (options === false) return false
+
+  if (options !== undefined && (!options || typeof options !== "object")) {
+    throw new Error(`Sitex favicon config must be an object or false.`)
+  }
+
   return {
-    name: "sitex:build-input",
-    enforce: "post",
-
-    config(userConfig): UserConfig {
-      const configRoot = path.resolve(userConfig.root ?? process.cwd())
-
-      return {
-        build: {
-          rollupOptions: {
-            input: createBuildInput(configRoot),
-          },
-        },
-      }
-    },
+    background: options?.background ?? "#111827",
+    color: options?.color ?? "#ffffff",
+    text: options?.text,
   }
 }
 
@@ -176,7 +197,6 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
   let root = process.cwd()
   let config: ResolvedConfig
   let cleanedBuildOutput = false
-  let wroteStaticHtml = false
   const hydration: HydrationRegistry = new Map()
 
   return {
@@ -186,8 +206,14 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
     config(userConfig): UserConfig {
       const configRoot = path.resolve(userConfig.root ?? process.cwd())
 
+      applyGlobalsLocales(configRoot, options)
+      writeGlobalsTypes(configRoot, options)
+
       return {
+        appType: "custom",
+        builder: {},
         resolve: {
+          dedupe: ["react", "react-dom"],
           tsconfigPaths: true,
         },
         build: {
@@ -195,8 +221,32 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
           manifest: true,
           outDir: "dist",
           emptyOutDir: false,
-          rollupOptions: {
-            input: createBuildInput(configRoot),
+        },
+        environments: {
+          client: {
+            build: {
+              rollupOptions: {
+                input: createBuildInput(configRoot),
+              },
+            },
+          },
+          ssr: {
+            resolve: {
+              noExternal: ["parse5"],
+            },
+            build: {
+              copyPublicDir: false,
+              emptyOutDir: true,
+              manifest: false,
+              outDir: ssrBuildDir,
+              rollupOptions: {
+                input: { render: packageFile("render/render", "tsx") },
+                output: {
+                  chunkFileNames: "chunks/[name]-[hash].mjs",
+                  entryFileNames: "[name].mjs",
+                },
+              },
+            },
           },
         },
       }
@@ -205,46 +255,61 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
     configResolved(resolvedConfig) {
       config = resolvedConfig
       root = resolvedConfig.root
+      applyGlobalsLocales(root, options)
     },
 
     async buildStart() {
       hydration.clear()
 
-      if (config.command === "build" && !cleanedBuildOutput) {
+      // Environments build with separate plugin instances, so gate the dist
+      // clean on the client environment instead of instance state alone.
+      if (
+        config.command === "build" &&
+        this.environment.name === "client" &&
+        !cleanedBuildOutput
+      ) {
         cleanedBuildOutput = true
         await rm(path.join(root, "dist"), { recursive: true, force: true })
       }
 
+      writeGlobalsTypes(root, options)
+
       const files = await fg("src/**/*.tsx", {
         cwd: root,
-        ignore: ["src/pages/examples/**"],
         onlyFiles: true,
       })
+      const pageFiles = files.filter(isTsxPageFile)
 
-      for (const file of files) {
-        const absoluteFile = path.join(root, file)
-        const code = await readFile(absoluteFile, "utf8")
-        collectHydrationEntries(code, absoluteFile, root, hydration)
+      if (pageFiles.length > 0) {
+        throw new Error(createTsxPageError(pageFiles.join('", "')))
       }
+
+      await Promise.all(
+        files.map(async (file) => {
+          const absoluteFile = path.join(root, file)
+          const code = await readFile(absoluteFile, "utf8")
+          collectHydrationEntries(code, absoluteFile, root, hydration)
+        })
+      )
 
       await writeMdxTypecheckFiles(root, options)
     },
 
     resolveId: {
       filter: {
-        id: /^(virtual:sitex-islands|virtual:sitex-routes|virtual:sitex-render|sitex:pages)$/,
+        id: /^(virtual:sitex-islands|virtual:sitex-routes|sitex:pages|sitex:globals)$/,
       },
       handler(id) {
         if (id === virtualHydrationId) return resolvedVirtualHydrationId
         if (id === virtualRoutesId) return resolvedVirtualRoutesId
-        if (id === virtualRenderId) return resolvedVirtualRenderId
         if (id === virtualPagesId) return resolvedVirtualPagesId
+        if (id === virtualGlobalsId) return resolvedVirtualGlobalsId
       },
     },
 
     load: {
       filter: {
-        id: /^(\0virtual:sitex-islands|\0virtual:sitex-routes|\0virtual:sitex-render|\0sitex:pages)$/,
+        id: /^(\0virtual:sitex-islands|\0virtual:sitex-routes|\0sitex:pages|\0sitex:globals)$/,
       },
       async handler(id) {
         if (id === resolvedVirtualHydrationId) {
@@ -257,12 +322,18 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
           return createJavaScriptModule(createVirtualRoutesCode())
         }
 
-        if (id === resolvedVirtualRenderId) {
-          return createJavaScriptModule(createVirtualRenderCode())
-        }
-
         if (id === resolvedVirtualPagesId) {
           return createJavaScriptModule(createPagesModuleCode(options))
+        }
+
+        if (id === resolvedVirtualGlobalsId) {
+          this.addWatchFile(resolveGlobalsFile(root, options))
+
+          for (const locale of options.locales) {
+            this.addWatchFile(resolveGlobalsFile(root, options, locale))
+          }
+
+          return createJavaScriptModule(createGlobalsModuleCode(root, options))
         }
       },
     },
@@ -276,11 +347,10 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
           return transformMdxPage(code, id, root, options)
         }
 
-        if (hasContentExport(code)) {
-          const file = normalizePath(path.relative(root, id))
-          throw new Error(
-            `Page module "${file}" exports content. Use "export const data" instead.`
-          )
+        const file = normalizePath(path.relative(root, id))
+
+        if (isTsxPageFile(file)) {
+          throw new Error(createTsxPageError(file))
         }
 
         if (!id.endsWith(".tsx") || !code.includes("client:")) return
@@ -290,13 +360,28 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
     },
 
     configureServer(server: ViteDevServer) {
-      if (shouldGenerateContentTypes()) {
-        void writePageDataTypesFromServer(root, server, options).catch(
-          (error: unknown) => {
-            server.config.logger.error(formatPageDataTypeError(error))
-          }
-        )
-      }
+      server.middlewares.use(async (req, res, next) => {
+        if (req.url?.split("?")[0] !== "/favicon.svg") {
+          next()
+          return
+        }
+
+        if (await hasPublicFile(root, "favicon.svg")) {
+          next()
+          return
+        }
+
+        const favicon = createGeneratedFavicon(root, options)
+
+        if (!favicon) {
+          next()
+          return
+        }
+
+        res.statusCode = 200
+        res.setHeader("Content-Type", "image/svg+xml")
+        res.end(req.method === "HEAD" ? undefined : favicon)
+      })
 
       server.middlewares.use(async (req, res, next) => {
         if (!isHtmlRequest(req)) {
@@ -307,35 +392,36 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
         const url = req.url?.split("?")[0] ?? "/"
 
         try {
-          const { render } = await importServerModule(server, virtualRenderId)
-          const initialHtml = await render(url)
+          const render = (await importServerModule(
+            server,
+            normalizePath(packageFile("render/render", "tsx"))
+          )) as RenderModule
+          const routes = await render.getRoutes()
+          const route = matchRoute(routes, url)
 
-          if (!initialHtml) {
+          if (!route) {
             next()
             return
           }
 
-          const stylesheetHrefs = readRouteStylesheetHrefs(
-            server.environments.ssr.moduleGraph,
-            root,
-            initialHtml.route.file
+          const html = await render.renderRoute(
+            route,
+            createRenderConfig(options),
+            () => ({
+              islandClientPreamble: renderReactRefreshFallbackScript(),
+              islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
+              stylesheetHrefs: readRouteStylesheetHrefs(
+                server.environments.ssr.moduleGraph,
+                root,
+                route.file
+              ),
+            })
           )
-          const html = await render(url, {
-            assetTags: renderStylesheetTags(stylesheetHrefs),
-            islandClientPreamble: renderReactRefreshFallbackScript(),
-            islandClientSrc: devServerFileUrl("hydration/client", "tsx"),
-          })
-
-          if (!html) {
-            next()
-            return
-          }
-
-          const transformed = await server.transformIndexHtml(url, html.html)
+          const pageHtml = await server.transformIndexHtml(url, html)
 
           res.statusCode = 200
           res.setHeader("Content-Type", "text/html")
-          res.end(req.method === "HEAD" ? undefined : transformed)
+          res.end(req.method === "HEAD" ? undefined : pageHtml)
         } catch (error) {
           next(error)
         }
@@ -373,20 +459,32 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
     hotUpdate: {
       async handler(update) {
         const file = normalizePath(update.file)
+        const relativeFile = normalizePath(path.relative(root, file))
+
+        if (isTsxPageFile(relativeFile)) {
+          config.logger.error(`[sitex] ${createTsxPageError(relativeFile)}`)
+          return []
+        }
 
         if (!shouldReloadForFile(file)) return
 
         invalidateVirtualModules(this.environment.moduleGraph, update.timestamp)
 
-        if (
-          shouldGenerateContentTypes() &&
-          (file.includes("/src/pages/") || file.includes("/src/data/"))
-        ) {
-          await writePageDataTypesFromServer(root, update.server, options)
+        // Layout exports drive the generated MDX page code (mdxComponents
+        // detection), so layout changes must re-transform MDX pages.
+        if (file.includes("/src/layouts/")) {
+          invalidateMdxPageModules(
+            this.environment.moduleGraph,
+            update.timestamp
+          )
         }
 
         if (file.includes("/src/pages/") && file.endsWith(".mdx")) {
           await writeMdxTypecheckFiles(root, options)
+        }
+
+        if (isGlobalsFile(relativeFile)) {
+          writeGlobalsTypes(root, options)
         }
 
         this.environment.hot.send({ type: "full-reload" })
@@ -394,11 +492,21 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
       },
     },
 
-    async closeBundle() {
-      if (config.command !== "build" || wroteStaticHtml) return
+    async buildApp(builder: ViteBuilder) {
+      const client = builder.environments.client
+      const ssr = builder.environments.ssr
 
-      wroteStaticHtml = true
-      await writeStaticHtml(root, options)
+      if (!client || !ssr) {
+        throw new Error(
+          "Sitex requires the client and ssr build environments to build the app."
+        )
+      }
+
+      await builder.build(client)
+
+      const ssrResult = await builder.build(ssr)
+
+      await writeStaticHtml(root, options, collectOutputChunks(ssrResult))
     },
   }
 }
@@ -429,6 +537,7 @@ function writeClientBuildEntriesSync(root: string) {
   const clientRoot = path.join(root, clientBuildDir)
   const styles = new Map<string, string>()
 
+  rmSync(clientRoot, { recursive: true, force: true })
   mkdirSync(clientRoot, { recursive: true })
 
   const islandClient = path.join(clientRoot, "island-client.ts")
@@ -441,68 +550,106 @@ function writeClientBuildEntriesSync(root: string) {
     )
 
     mkdirSync(path.dirname(entry), { recursive: true })
-    writeFileSync(entry, `import ${JSON.stringify(path.join(root, file))}\n`)
+    writeFileSync(entry, createStyleEntryCode(root, file))
     styles.set(file, entry)
   }
 
   return { islandClient, styles }
 }
 
-async function writeStaticHtml(root: string, options: ResolvedSitexOptions) {
+function createStyleEntryCode(root: string, file: string) {
+  return `import ${JSON.stringify(path.join(root, file))}\n`
+}
+
+type BuildOutputChunk = {
+  facadeModuleId: string | null
+  fileName: string
+  imports: string[]
+  moduleIds: string[]
+  type: "chunk"
+}
+
+function collectOutputChunks(result: unknown): BuildOutputChunk[] {
+  const outputs = Array.isArray(result) ? result : [result]
+  const chunks: BuildOutputChunk[] = []
+
+  for (const output of outputs) {
+    if (!output || typeof output !== "object" || !("output" in output)) {
+      continue
+    }
+
+    for (const entry of (output as { output: unknown[] }).output) {
+      if (
+        entry &&
+        typeof entry === "object" &&
+        "type" in entry &&
+        entry.type === "chunk"
+      ) {
+        chunks.push(entry as BuildOutputChunk)
+      }
+    }
+  }
+
+  return chunks
+}
+
+function createRenderConfig(options: ResolvedSitexOptions): RenderConfig {
+  return {
+    defaultLocale: options.site.locale,
+    faviconHref: options.favicon === false ? undefined : "/favicon.svg",
+    locales: options.locales,
+    siteUrl: options.site.url,
+    trailingSlash: options.trailingSlash,
+  }
+}
+
+async function writeStaticHtml(
+  root: string,
+  options: ResolvedSitexOptions,
+  ssrChunks: BuildOutputChunk[]
+) {
   const publicRoot = await findBuildPublicRoot(root)
   const manifest = await readManifest(publicRoot)
   const islandClientAsset = Object.values(manifest).find(
     (entry) => entry.name === "islandClient"
   )
   const cssAssetMap = createCssAssetMap(root, manifest)
+  const renderFile = path.join(root, ssrBuildDir, "render.mjs")
+  const render = (await import(pathToFileURL(renderFile).href)) as RenderModule
+  const routes = await render.getRoutes()
 
-  const server = await createServer({
-    configFile: path.join(root, "vite.config.ts"),
-    server: { middlewareMode: true },
-    appType: "custom",
-    mode: "production",
-  })
+  for (const route of routes) {
+    const html = await render.renderRoute(
+      route,
+      createRenderConfig(options),
+      ({ hasIslands }) => {
+        const stylesheetHrefs = readRouteStylesheetAssets(
+          ssrChunks,
+          root,
+          route.file,
+          cssAssetMap
+        )
 
-  try {
-    if (shouldGenerateContentTypes()) {
-      await writePageDataTypesFromServer(root, server, options)
-    }
+        if (hasIslands) {
+          stylesheetHrefs.push(...readManifestChunkCss(islandClientAsset))
+        }
 
-    const { getRoutes, injectRouteHtmlAssets, renderMatchedRoute } =
-      await importServerModule(server, virtualRenderId)
-    const routes = await getRoutes()
-
-    for (const route of routes) {
-      const html = await renderMatchedRoute(route, route.params)
-
-      if (!html) {
-        throw new Error(`Sitex could not render route "${route.path}".`)
+        return {
+          islandClientSrc:
+            hasIslands && islandClientAsset?.file
+              ? publicAssetPath(islandClientAsset.file)
+              : undefined,
+          stylesheetHrefs,
+        }
       }
+    )
 
-      const transformed = stripViteClientScript(
-        await server.transformIndexHtml(route.path, html)
-      )
-      const stylesheetAssets = readRouteStylesheetAssets(
-        server.environments.ssr.moduleGraph,
-        root,
-        route.file,
-        cssAssetMap
-      )
-      if (html.includes("data-sitex-island")) {
-        stylesheetAssets.push(...readManifestChunkCss(islandClientAsset))
-      }
-      const finalHtml = injectRouteHtmlAssets(transformed, {
-        assetTags: renderStylesheetTags(stylesheetAssets),
-        islandClientSrc: islandClientAsset?.file
-          ? publicAssetPath(islandClientAsset.file)
-          : undefined,
-      })
-
-      await writeHtml(publicRoot, route.path, finalHtml, options)
-    }
-  } finally {
-    await server.close()
+    await writeHtml(publicRoot, route.path, html, options)
   }
+
+  await writeGeneratedFavicon(publicRoot, root, options)
+  await writeSitemap(publicRoot, routes, options)
+  await writeRobots(publicRoot, options)
 }
 
 async function writeHtml(
@@ -517,12 +664,153 @@ async function writeHtml(
   await writeFile(file, html)
 }
 
-async function collectRouteFiles(root: string) {
-  return fg(["src/pages/**/*.tsx", "src/pages/**/*.mdx"], {
-    cwd: root,
-    ignore: ["src/pages/examples/**"],
-    onlyFiles: true,
-  })
+async function writeGeneratedFavicon(
+  publicRoot: string,
+  root: string,
+  options: ResolvedSitexOptions
+) {
+  const favicon = createGeneratedFavicon(root, options)
+
+  if (!favicon) return
+
+  const file = path.join(publicRoot, "favicon.svg")
+
+  try {
+    await access(file)
+    return
+  } catch {
+    // No app-provided favicon was copied to dist; write the generated one.
+  }
+
+  await writeFile(file, favicon)
+}
+
+async function hasPublicFile(root: string, file: string) {
+  try {
+    await access(path.join(root, "public", file))
+    return true
+  } catch {
+    return false
+  }
+}
+
+function createGeneratedFavicon(root: string, options: ResolvedSitexOptions) {
+  if (options.favicon === false) return
+
+  const label =
+    options.favicon.text ??
+    readGlobalsNameSync(root, options) ??
+    new URL(options.site.url).hostname
+  const text = createFaviconText(label)
+
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">`,
+    `  <rect width="64" height="64" rx="14" fill="${escapeXml(options.favicon.background)}"/>`,
+    `  <text x="50%" y="50%" dy=".35em" text-anchor="middle" fill="${escapeXml(options.favicon.color)}" font-family="Arial, sans-serif" font-size="${text.length > 1 ? 28 : 34}" font-weight="700">${escapeXml(text)}</text>`,
+    `</svg>`,
+    "",
+  ].join("\n")
+}
+
+function readGlobalsNameSync(root: string, options: ResolvedSitexOptions) {
+  try {
+    const globals = readGlobalsData(root, options)
+    const name = globals.name
+
+    return typeof name === "string" && name.trim() ? name : undefined
+  } catch {
+    return undefined
+  }
+}
+
+function createFaviconText(label: string) {
+  const words = label
+    .replace(/https?:\/\//, "")
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+
+  const initials =
+    words.length >= 2
+      ? `${words[0]?.[0] ?? ""}${words[1]?.[0] ?? ""}`
+      : (words[0]?.slice(0, 2) ?? "S")
+
+  return initials.toUpperCase()
+}
+
+async function writeSitemap(
+  publicRoot: string,
+  routes: Route[],
+  options: ResolvedSitexOptions
+) {
+  const file = path.join(publicRoot, "sitemap.xml")
+
+  try {
+    await access(file)
+    return
+  } catch {
+    // No app-provided sitemap.xml; write the generated one.
+  }
+
+  const entries = routes
+    .filter((route) => {
+      if (route.data.noindex === true) return false
+
+      const publicPath = routePathToPublicPath(
+        route.path,
+        options.trailingSlash
+      )
+
+      // A canonical override means this URL is not the page's canonical
+      // location, so it does not belong in the sitemap.
+      return (
+        route.data.canonical === undefined ||
+        route.data.canonical === `${options.site.url}${publicPath}`
+      )
+    })
+    .map((route) => {
+      const publicPath = routePathToPublicPath(
+        route.path,
+        options.trailingSlash
+      )
+      const loc = `${options.site.url}${publicPath}`
+      const lastmod = route.data.updatedAt ?? route.data.publishedAt
+      const lines = [`    <loc>${escapeXml(loc)}</loc>`]
+
+      if (lastmod) lines.push(`    <lastmod>${escapeXml(lastmod)}</lastmod>`)
+
+      return ["  <url>", ...lines, "  </url>"].join("\n")
+    })
+
+  const sitemap = [
+    `<?xml version="1.0" encoding="UTF-8"?>`,
+    `<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">`,
+    ...entries,
+    `</urlset>`,
+    "",
+  ].join("\n")
+
+  await writeFile(file, sitemap)
+}
+
+async function writeRobots(publicRoot: string, options: ResolvedSitexOptions) {
+  const file = path.join(publicRoot, "robots.txt")
+
+  try {
+    await access(file)
+    return
+  } catch {
+    // No app-provided robots.txt; write the default.
+  }
+
+  const robots = [
+    "User-agent: *",
+    "Allow: /",
+    "",
+    `Sitemap: ${options.site.url}/sitemap.xml`,
+    "",
+  ].join("\n")
+
+  await writeFile(file, robots)
 }
 
 function collectStyleFilesSync(root: string) {
@@ -532,98 +820,200 @@ function collectStyleFilesSync(root: string) {
   })
 }
 
-async function collectPageDataRoutes(
+function writeGlobalsTypes(root: string, options: ResolvedSitexOptions) {
+  const globals = readGlobalsData(root, options)
+  const typeFile = path.join(root, ".sitex/globals.d.ts")
+
+  mkdirSync(path.dirname(typeFile), { recursive: true })
+  writeFileSync(typeFile, createGlobalsTypesCode(globals, options.locales))
+}
+
+function createGlobalsModuleCode(root: string, options: ResolvedSitexOptions) {
+  const globals = readGlobalsData(root, options)
+  const locales: { [key: string]: JsonValue } = {}
+
+  for (const locale of options.locales) {
+    locales[locale] = readGlobalsData(root, options, locale)
+  }
+
+  return [
+    `export const globals = ${JSON.stringify(globals)}`,
+    `export const locales = ${JSON.stringify(locales)}`,
+    `export default globals`,
+    "",
+  ].join("\n")
+}
+
+function readGlobalsData(
   root: string,
-  options: ResolvedSitexOptions
+  options: ResolvedSitexOptions,
+  locale?: string
 ) {
-  const files = await collectRouteFiles(root)
-  const routes: PageDataRoute[] = []
+  const file = resolveGlobalsFile(root, options, locale)
+  let source: string
 
-  for (const file of files) {
-    if (hasRouteParams(file)) continue
+  try {
+    source = readFileSync(file, "utf8")
+  } catch {
+    throw new Error(
+      locale
+        ? `Sitex requires ${globalsDir}/${locale}.yaml for the "${locale}" locale.`
+        : `Sitex requires ${globalsDir}/index.yaml. Create it for global layout content.`
+    )
+  }
 
-    if (file.endsWith(".mdx")) {
-      routes.push({
-        file,
-        path: routePathToPublicPath(
-          staticPageFileToPath(file),
-          options.trailingSlash
-        ),
-      })
-      continue
-    }
+  return parseGlobalsYaml(source, normalizePath(path.relative(root, file)))
+}
 
-    const code = await readFile(path.join(root, file), "utf8")
+function resolveGlobalsFile(
+  root: string,
+  options: ResolvedSitexOptions,
+  locale?: string
+) {
+  const names = locale ? [locale] : ["index", options.site.locale]
 
-    if (hasContentExport(code)) {
-      throw new Error(
-        `Page module "${file}" exports content. Use "export const data" instead.`
-      )
-    }
+  for (const name of names) {
+    for (const extension of ["yaml", "yml"]) {
+      const file = path.join(root, globalsDir, `${name}.${extension}`)
 
-    if (hasDataExport(code)) {
-      routes.push({
-        file,
-        path: routePathToPublicPath(
-          staticPageFileToPath(file),
-          options.trailingSlash
-        ),
-      })
+      if (readFileSyncSafe(file)) return file
     }
   }
 
-  return routes
+  return path.join(root, globalsDir, `${names[0]}.yaml`)
 }
 
-async function collectPageDataFromServer(
-  root: string,
-  server: ViteDevServer,
-  options: ResolvedSitexOptions
-) {
-  const routes = await collectPageDataRoutes(root, options)
-  const pages: PageData[] = []
+/**
+ * Globals filenames define the site locales: index.yaml serves the root
+ * locale (named by site.locale) and every other file, like en.yaml, serves
+ * routes under its /{locale} prefix. A single named file without index.yaml
+ * serves the root and sets the locale name.
+ */
+function applyGlobalsLocales(root: string, options: ResolvedSitexOptions) {
+  const files = fg.sync(["*.yaml", "*.yml"], {
+    cwd: path.join(root, globalsDir),
+    onlyFiles: true,
+  })
+  const names = [
+    ...new Set(files.map((file) => file.replace(/\.ya?ml$/, ""))),
+  ].sort()
 
-  for (const route of routes) {
-    const module = (await importServerModule(server, `/${route.file}`)) as {
-      data?: unknown
-    }
-
-    if (module.data !== undefined) {
-      const data = readJsonData(module.data, route.file)
-      validatePageData(data, route.file)
-      pages.push({
-        path: route.path,
-        ...data,
-      })
-    }
+  if (names.includes("index")) {
+    options.locales = names.filter((name) => name !== "index")
+    return
   }
 
-  return pages
+  const [only] = names
+
+  if (names.length === 1 && only) {
+    options.site.locale = only
+    options.locales = []
+    return
+  }
+
+  if (names.length === 0) {
+    options.locales = []
+    return
+  }
+
+  throw new Error(
+    `Sitex found multiple globals files in ${globalsDir} without an index file. Add ${globalsDir}/index.yaml for the root locale; every other file like en.yaml serves /en routes.`
+  )
 }
 
-async function writePageDataTypesFromServer(
-  root: string,
-  server: ViteDevServer,
-  options: ResolvedSitexOptions
+function parseGlobalsYaml(source: string, file: string) {
+  const value = parseYaml(source)
+
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`Globals in "${file}" must be a YAML object.`)
+  }
+
+  return readJsonData(value, file)
+}
+
+function createGlobalsTypesCode(
+  globals: { [key: string]: JsonValue },
+  localeNames: readonly string[]
 ) {
-  const typesFile = path.join(root, pagesTypesFile)
-  const pages = await collectPageDataFromServer(root, server, options)
+  const localesKey =
+    localeNames.length === 0
+      ? "never"
+      : localeNames.map((name) => JSON.stringify(name)).join(" | ")
 
-  await mkdir(path.dirname(typesFile), { recursive: true })
-  await writeFileAtomic(typesFile, await createPagesTypesCode(pages))
+  return [
+    `declare module "sitex:globals" {`,
+    `  export interface Globals ${createJsonType(globals)}`,
+    `  const globals: Globals`,
+    `  export const locales: Readonly<Record<${localesKey}, Globals>>`,
+    `  export { globals }`,
+    `  export default globals`,
+    `}`,
+    "",
+  ].join("\n")
 }
 
-function formatPageDataTypeError(error: unknown) {
-  const message = error instanceof Error ? error.message : String(error)
+function createJsonType(value: JsonValue): string {
+  if (typeof value === "string") return JSON.stringify(value)
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value)
+  }
+  if (value === null) return "null"
 
-  return `[sitex] Could not generate page data types: ${message}`
+  if (Array.isArray(value)) {
+    return `readonly [${value.map(createJsonType).join(", ")}]`
+  }
+
+  const entries = Object.entries(value).map(([key, item]) => {
+    return `readonly ${JSON.stringify(key)}: ${createJsonType(item)}`
+  })
+
+  return `{ ${entries.join("; ")} }`
+}
+
+async function removeGeneratedDirectory(directory: string) {
+  for (let attempt = 0; attempt < 3; attempt += 1) {
+    try {
+      await rm(directory, { recursive: true, force: true })
+      return
+    } catch (error) {
+      if (attempt === 2 || !isRetryableRemoveError(error)) throw error
+      await new Promise((resolve) => setTimeout(resolve, 25))
+    }
+  }
+}
+
+function isRetryableRemoveError(error: unknown) {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "code" in error &&
+    (error.code === "ENOTEMPTY" || error.code === "EBUSY")
+  )
+}
+
+function isTsxPageFile(file: string) {
+  return file.startsWith("src/pages/") && file.endsWith(".tsx")
+}
+
+function createTsxPageError(file: string) {
+  return `Sitex pages are MDX files. Found TSX file "${file}" in src/pages. Move the page markup into a layout in src/layouts and create an MDX page that selects it with "layout" frontmatter.`
 }
 
 function shouldReloadForFile(file: string) {
   return (
     file.includes("/src/pages/") ||
+    file.includes("/src/layouts/") ||
     file.includes("/src/components/") ||
-    file.includes("/src/data/")
+    file.includes("/src/data/") ||
+    file.includes(`/${globalsDir}/`) ||
+    file.endsWith(".css")
+  )
+}
+
+function isGlobalsFile(file: string) {
+  return (
+    file.startsWith(`${globalsDir}/`) &&
+    (file.endsWith(".yaml") || file.endsWith(".yml"))
   )
 }
 
@@ -635,12 +1025,25 @@ function invalidateVirtualModules(
 
   for (const id of [
     resolvedVirtualRoutesId,
-    resolvedVirtualRenderId,
     resolvedVirtualPagesId,
+    resolvedVirtualGlobalsId,
   ]) {
     const module = moduleGraph.getModuleById(id)
 
     if (module) {
+      moduleGraph.invalidateModule(module, invalidatedModules, timestamp, true)
+    }
+  }
+}
+
+function invalidateMdxPageModules(
+  moduleGraph: EnvironmentModuleGraph,
+  timestamp: number
+) {
+  const invalidatedModules = new Set<EnvironmentModuleNode>()
+
+  for (const module of moduleGraph.idToModuleMap.values()) {
+    if (module.file?.endsWith(".mdx")) {
       moduleGraph.invalidateModule(module, invalidatedModules, timestamp, true)
     }
   }
@@ -672,21 +1075,36 @@ async function transformMdxPage(
   options: ResolvedSitexOptions
 ) {
   const file = normalizePath(path.relative(root, id))
-  const { headings, result } = compileMdx(code)
-  const { data, layoutFile } = await readMdxPageMetadata(
-    root,
-    file,
-    result.frontmatter,
-    headings
+
+  if (!file.startsWith("src/pages/")) {
+    throw new Error(
+      `MDX file "${file}" is outside src/pages. Sitex only renders MDX pages; move prose into a page or a component.`
+    )
+  }
+
+  const { headings, result } = compileMdxCached(root, file, code)
+  const { data, layoutFile, layoutHasMdxComponents } =
+    await readMdxPageMetadata(root, file, result.frontmatter, headings)
+  const routePath = pageFileToRoutePath(file)
+  const pagePath = routePathToPublicPath(routePath, options.trailingSlash)
+  const pageUrl = createPageUrl(options.site.url, pagePath)
+  const pageLocale = resolveRouteLocale(
+    routePath,
+    options.locales,
+    options.site.locale
   )
-  const pagePath = routePathToPublicPath(
-    staticPageFileToPath(file),
-    options.trailingSlash
-  )
+
+  if (
+    /\bexport\s+(?:const|let|var|function|class)\s+data\b/.test(result.code)
+  ) {
+    throw new Error(
+      `MDX page "${file}" cannot export "data". Page data comes from frontmatter.`
+    )
+  }
 
   const mdxCode = result.code.replace(
     /export\s+default\s+MDXContent\s*;?\s*$/,
-    "const MarkdownContent = MDXContent;"
+    "const _sitexMarkdownContent = MDXContent;"
   )
 
   if (mdxCode === result.code) {
@@ -698,15 +1116,15 @@ async function transformMdxPage(
   return [
     mdxCode,
     ...createMdxComponentImportCode(options.mdx.components),
-    `import * as LayoutModule from ${JSON.stringify(`/${normalizePath(path.relative(root, layoutFile))}`)}`,
-    `const Layout = LayoutModule.default`,
-    `const mdxComponentsDescriptor = Object.getOwnPropertyDescriptor(LayoutModule, "mdxComponents")`,
-    `const layoutMdxComponents = mdxComponentsDescriptor?.get ? mdxComponentsDescriptor.get.call(LayoutModule) : mdxComponentsDescriptor?.value`,
-    `const mdxComponents = Object.assign({}, configuredMdxComponents, layoutMdxComponents)`,
+    `import * as _sitexLayoutModule from ${JSON.stringify(`/${normalizePath(path.relative(root, layoutFile))}`)}`,
+    `const _sitexLayout = _sitexLayoutModule.default`,
+    layoutHasMdxComponents
+      ? `const _sitexMdxComponents = Object.assign({}, _sitexConfiguredMdxComponents, _sitexLayoutModule.mdxComponents)`
+      : `const _sitexMdxComponents = _sitexConfiguredMdxComponents`,
     `export const data = ${JSON.stringify(data)}`,
-    `export default function MdxPage() {`,
-    `  const { layout: _layout, path: _path, children: _children, ...props } = data`,
-    `  return _jsx(Layout, Object.assign({}, props, { path: ${JSON.stringify(pagePath)}, children: _jsx(MarkdownContent, { components: mdxComponents }) }))`,
+    `export default function _SitexMdxPage() {`,
+    `  const { layout: _layout, ...props } = data`,
+    `  return _jsx(_sitexLayout, Object.assign({}, props, { path: ${JSON.stringify(pagePath)}, url: ${JSON.stringify(pageUrl)}, locale: ${JSON.stringify(pageLocale)}, headings: data.headings, children: _jsx(_sitexMarkdownContent, { components: _sitexMdxComponents }) }))`,
     `}`,
   ].join("\n")
 }
@@ -717,13 +1135,14 @@ function createMdxComponentImportCode(components: Record<string, string>) {
   return [
     ...entries.map(
       ([, moduleId], index) =>
-        `import MdxComponent${index} from ${JSON.stringify(moduleId)}`
+        `import _sitexMdxComponent${index} from ${JSON.stringify(moduleId)}`
     ),
     entries.length === 0
-      ? `const configuredMdxComponents = {}`
-      : `const configuredMdxComponents = { ${entries
+      ? `const _sitexConfiguredMdxComponents = {}`
+      : `const _sitexConfiguredMdxComponents = { ${entries
           .map(
-            ([name], index) => `${JSON.stringify(name)}: MdxComponent${index}`
+            ([name], index) =>
+              `${JSON.stringify(name)}: _sitexMdxComponent${index}`
           )
           .join(", ")} }`,
   ]
@@ -736,33 +1155,41 @@ async function writeMdxTypecheckFiles(
   const typecheckRoot = path.join(root, mdxTypecheckDir)
   const files = await fg("src/pages/**/*.mdx", {
     cwd: root,
-    ignore: ["src/pages/examples/**"],
     onlyFiles: true,
   })
 
-  await rm(typecheckRoot, { recursive: true, force: true })
+  await removeGeneratedDirectory(typecheckRoot)
 
-  for (const file of files) {
-    const code = await readFile(path.join(root, file), "utf8")
-    const { headings, result } = compileMdx(code)
-    const { data, layoutFile } = await readMdxPageMetadata(
-      root,
-      file,
-      result.frontmatter,
-      headings
-    )
-    const pagePath = routePathToPublicPath(
-      staticPageFileToPath(file),
-      options.trailingSlash
-    )
-    const typecheckFile = path.join(typecheckRoot, `${file}.tsx`)
+  await Promise.all(
+    files.map(async (file) => {
+      const code = await readFile(path.join(root, file), "utf8")
+      const { headings, result } = compileMdxCached(root, file, code)
+      const { data, layoutFile } = await readMdxPageMetadata(
+        root,
+        file,
+        result.frontmatter,
+        headings
+      )
+      const routePath = pageFileToRoutePath(file)
+      const pagePath = routePathToPublicPath(routePath, options.trailingSlash)
+      const pageUrl = createPageUrl(options.site.url, pagePath)
+      const typecheckFile = path.join(typecheckRoot, `${file}.tsx`)
 
-    await mkdir(path.dirname(typecheckFile), { recursive: true })
-    await writeFileAtomic(
-      typecheckFile,
-      createMdxTypecheckCode(typecheckFile, layoutFile, data, pagePath)
-    )
-  }
+      await mkdir(path.dirname(typecheckFile), { recursive: true })
+      await writeFileAtomic(
+        typecheckFile,
+        createMdxTypecheckCode(typecheckFile, layoutFile, data, {
+          locale: resolveRouteLocale(
+            routePath,
+            options.locales,
+            options.site.locale
+          ),
+          path: pagePath,
+          url: pageUrl,
+        })
+      )
+    })
+  )
 }
 
 async function readMdxPageMetadata(
@@ -773,64 +1200,61 @@ async function readMdxPageMetadata(
 ) {
   const frontmatterData = parseMdxFrontmatter(frontmatter, file)
 
-  if (Object.hasOwn(frontmatterData, "headings")) {
-    throw new Error(
-      `Frontmatter in "${file}" cannot define reserved key "headings".`
-    )
-  }
+  validatePageFrontmatter(frontmatterData, file)
 
   const data: { [key: string]: JsonValue } = {
     ...frontmatterData,
     headings: headings as unknown as JsonValue,
   }
-  const layout = data.layout
-
-  if (hasRouteParams(file)) {
-    throw new Error(`Dynamic MDX page "${file}" is not supported.`)
-  }
-
-  if (typeof layout !== "string" || layout.trim() === "") {
-    throw new Error(
-      `MDX page "${file}" must define a string "layout" in frontmatter.`
-    )
-  }
-
-  if (
-    layout.startsWith(".") ||
-    layout.startsWith("/") ||
-    layout.includes("..") ||
-    !/^[A-Za-z0-9][A-Za-z0-9_/-]*$/.test(layout)
-  ) {
-    throw new Error(
-      `MDX page "${file}" has unsupported layout "${layout}". Use a name like "blog/post", not a relative path.`
-    )
-  }
-
-  validatePageData(data, file)
+  const layout = data.layout as string
 
   const layoutFile = normalizePath(
     path.join(root, "src/layouts", `${layout}.tsx`)
   )
 
+  let layoutSource: string
+
   try {
-    await access(layoutFile)
+    layoutSource = await readFile(layoutFile, "utf8")
   } catch {
     throw new Error(
       `MDX page "${file}" references missing layout "src/layouts/${layout}.tsx".`
     )
   }
 
-  return { data, layoutFile }
+  return {
+    data,
+    layoutFile,
+    layoutHasMdxComponents: hasMdxComponentsExport(layoutSource),
+  }
+}
+
+function hasMdxComponentsExport(source: string) {
+  return /\bexport\s+(?:const|let|var|function|class)\s+mdxComponents\b|\bexport\s*\{[^}]*\bmdxComponents\b/.test(
+    source
+  )
 }
 
 function createMdxTypecheckCode(
   typecheckFile: string,
   layoutFile: string,
   data: { [key: string]: JsonValue },
-  pagePath: string
+  page: {
+    locale: string
+    path: string
+    url: string
+  }
 ) {
   const dataEntries = Object.keys(data)
-    .filter((key) => key !== "layout" && key !== "path" && key !== "children")
+    .filter(
+      (key) =>
+        key !== "layout" &&
+        key !== "path" &&
+        key !== "url" &&
+        key !== "locale" &&
+        key !== "headings" &&
+        key !== "children"
+    )
     .map((key) => `  ${JSON.stringify(key)}: data[${JSON.stringify(key)}],`)
 
   return [
@@ -838,15 +1262,35 @@ function createMdxTypecheckCode(
     `import Layout from ${JSON.stringify(createRelativeImport(typecheckFile, layoutFile))}`,
     ``,
     `const data = ${JSON.stringify(data, null, 2)} as const`,
-    `const { layout: _layout, path: _path, children: _children, ..._props } = data as typeof data & { path?: never; children?: never }`,
     `const layoutProps = {`,
     ...dataEntries,
-    `  path: ${JSON.stringify(pagePath)},`,
+    `  path: ${JSON.stringify(page.path)},`,
+    `  url: ${JSON.stringify(page.url)},`,
+    `  locale: ${JSON.stringify(page.locale)},`,
+    `  headings: data.headings,`,
     `} satisfies Omit<ComponentProps<typeof Layout>, "children">`,
     ``,
     `export const typecheck = <Layout {...layoutProps}>{null}</Layout>`,
     ``,
   ].join("\n")
+}
+
+const mdxCompileCache = new Map<
+  string,
+  { source: string; compiled: ReturnType<typeof compileMdx> }
+>()
+
+function compileMdxCached(root: string, file: string, code: string) {
+  const key = `${root}:${file}`
+  const cached = mdxCompileCache.get(key)
+
+  if (cached && cached.source === code) return cached.compiled
+
+  const compiled = compileMdx(code)
+
+  mdxCompileCache.set(key, { source: code, compiled })
+
+  return compiled
 }
 
 function compileMdx(code: string) {
@@ -920,17 +1364,13 @@ function createRelativeImport(fromFile: string, toFile: string) {
 
 function createVirtualRoutesCode() {
   return [
-    `import { readPageRoutes, sortRoutes, validateUniqueRoutePaths } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
-    `const routeModules = import.meta.glob(["/src/pages/**/*.tsx", "/src/pages/**/*.mdx"])`,
-    `function isRouteFile(file) {`,
-    `  return !file.includes("/src/pages/examples/")`,
-    `}`,
+    `import { readPageRoute, sortRoutes, validateUniqueRoutePaths } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
+    `const routeModules = import.meta.glob(["/src/pages/**/*.mdx"])`,
     `export async function getRoutes() {`,
     `  const routes = []`,
     `  for (const [file, load] of Object.entries(routeModules)) {`,
-    `    if (!isRouteFile(file)) continue`,
     `    const routeFile = file.replace(/^\\/+/, "")`,
-    `    routes.push(...await readPageRoutes(await load(), routeFile))`,
+    `    routes.push(readPageRoute(await load(), routeFile))`,
     `  }`,
     `  validateUniqueRoutePaths(routes)`,
     `  return sortRoutes(routes)`,
@@ -942,156 +1382,33 @@ function createPagesModuleCode(options: ResolvedSitexOptions) {
   const trailingSlash = JSON.stringify(options.trailingSlash)
 
   return [
-    `const pageDataModules = import.meta.glob(["/src/pages/**/*.tsx", "/src/pages/**/*.mdx"], { import: "data" })`,
-    `function normalizeRoutePath(path) {`,
-    `  if (!path || path === "/") return "/"`,
-    `  return "/" + path.replace(/^\\/+|\\/+$/g, "")`,
-    `}`,
-    `function staticPageFileToPath(file) {`,
-    `  const route = file.replace(/^src\\/pages/, "").replace(/\\/index\\.(tsx|mdx)$/, "/").replace(/\\.(tsx|mdx)$/, "")`,
-    `  return normalizeRoutePath(route || "/")`,
-    `}`,
-    `function routePathToPublicPath(path) {`,
-    `  if (path === "/") return "/"`,
-    `  return ${trailingSlash} ? path.replace(/\\/$/, "") + "/" : path.replace(/\\/$/, "")`,
-    `}`,
-    `function isRouteFile(file) {`,
-    `  return !file.includes("/src/pages/examples/") && !/\\[[^\\]]+\\]/.test(file)`,
-    `}`,
-    `function validateData(data, file) {`,
-    `  if (data && typeof data === "object") {`,
-    `    if (Object.hasOwn(data, "path")) throw new Error(\`Page data in "\${file}" cannot define reserved key "path".\`)`,
-    `    if (Object.hasOwn(data, "children")) throw new Error(\`Page data in "\${file}" cannot define reserved key "children".\`)`,
-    `  }`,
-    `}`,
+    `import { normalizeRoutePath, pageFileToRoutePath, routePathToPublicPath } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
+    `const pageDataModules = import.meta.glob(["/src/pages/**/*.mdx"], { import: "data" })`,
     `const routeMeta = Object.keys(pageDataModules)`,
-    `  .filter(isRouteFile)`,
     `  .map((file) => {`,
     `    const routeFile = file.replace(/^\\/+/, "")`,
-    `    return { file: routeFile, path: routePathToPublicPath(staticPageFileToPath(routeFile)) }`,
+    `    const routePath = pageFileToRoutePath(routeFile)`,
+    `    return { file: routeFile, routePath, path: routePathToPublicPath(routePath, ${trailingSlash}) }`,
     `  })`,
     `async function toPage(route) {`,
     `  const load = pageDataModules["/" + route.file]`,
     `  if (!load) return undefined`,
     `  const data = await load()`,
     `  if (data === undefined) return undefined`,
-    `  validateData(data, route.file)`,
     `  return { path: route.path, ...data }`,
     `}`,
     `export async function getPages(prefix) {`,
-    `  const publicPrefix = prefix === undefined ? undefined : routePathToPublicPath(normalizeRoutePath(prefix))`,
-    `  const matches = publicPrefix === undefined ? routeMeta : routeMeta.filter((page) => page.path.startsWith(publicPrefix))`,
+    `  const routePrefix = prefix === undefined ? undefined : normalizeRoutePath(prefix)`,
+    `  const matches = routePrefix === undefined || routePrefix === "/"`,
+    `    ? routeMeta`,
+    `    : routeMeta.filter((page) => page.routePath === routePrefix || page.routePath.startsWith(routePrefix + "/"))`,
     `  const pages = await Promise.all(matches.map(toPage))`,
     `  return pages.filter((page) => page !== undefined)`,
     `}`,
     `export async function getPage(path) {`,
-    `  const publicPath = routePathToPublicPath(normalizeRoutePath(path))`,
-    `  const route = routeMeta.find((page) => page.path === publicPath)`,
+    `  const routePath = normalizeRoutePath(path)`,
+    `  const route = routeMeta.find((page) => page.routePath === routePath)`,
     `  return route ? toPage(route) : undefined`,
-    `}`,
-  ].join("\n")
-}
-
-async function createPagesTypesCode(pages: PageData[]) {
-  const { InputData, jsonInputForTargetLanguage, quicktype } =
-    await import("quicktype-core")
-  const jsonInput = jsonInputForTargetLanguage("typescript")
-
-  await jsonInput.addSource({
-    name: "Page",
-    samples:
-      pages.length > 0
-        ? pages.map((page) => JSON.stringify(page))
-        : [JSON.stringify({ path: "" })],
-  })
-
-  const inputData = new InputData()
-  inputData.addInput(jsonInput)
-
-  const { lines } = await quicktype({
-    inferEnums: false,
-    inferBooleanStrings: false,
-    inferDateTimes: false,
-    inferIntegerStrings: false,
-    inferUuids: false,
-    inputData,
-    lang: "typescript",
-    rendererOptions: {
-      "just-types": "true",
-      "prefer-types": "true",
-      readonly: "true",
-      "runtime-typecheck": "false",
-    },
-  })
-
-  const types = lines
-    .join("\n")
-    .replaceAll(/^export type /gm, "type ")
-    .split("\n")
-    .map((line) => (line ? `  ${line}` : ""))
-    .join("\n")
-
-  return [
-    `declare module "sitex:pages" {`,
-    types,
-    `  type Pages = Page[]`,
-    `  export function getPages(prefix?: string): Promise<Pages>`,
-    `  export function getPage(path: string): Promise<Page | undefined>`,
-    `}`,
-    "",
-  ].join("\n")
-}
-
-function createVirtualRenderCode() {
-  return [
-    `import { prerender } from "react-dom/static"`,
-    `import { getRoutes } from ${JSON.stringify(virtualRoutesId)}`,
-    `import { createPageContext, matchRoute, readPageRoutes } from ${JSON.stringify(packageFile("router/runtime", "ts"))}`,
-    `export { getRoutes }`,
-    `function replaceLast(value, search, replacement) {`,
-    `  const index = value.lastIndexOf(search)`,
-    `  if (index === -1) return value`,
-    `  return value.slice(0, index) + replacement + value.slice(index + search.length)`,
-    `}`,
-    `export function injectRouteHtmlAssets(html, options = {}) {`,
-    `  const script = options.islandClientSrc && html.includes("data-sitex-island")`,
-    `    ? \`\${options.islandClientPreamble ?? ""}<script src="\${options.islandClientSrc}" type="module"></script>\``,
-    `    : ""`,
-    `  const headTags = options.assetTags ?? ""`,
-    `  let result = html`,
-    `  if (headTags) {`,
-    `    if (!result.includes("</head>")) {`,
-    `      throw new Error("Sitex could not inject build assets because the document shell has no </head>.")`,
-    `    }`,
-    `    result = result.replace("</head>", headTags + "</head>")`,
-    `  }`,
-    `  if (script) {`,
-    `    if (!result.includes("</body>")) {`,
-    `      throw new Error("Sitex could not inject island client assets because the document shell has no </body>.")`,
-    `    }`,
-    `    result = replaceLast(result, "</body>", script + "</body>")`,
-    `  }`,
-    `  return result`,
-    `}`,
-    `function createRenderResult(route, params, html) {`,
-    `  return { html, params, route }`,
-    `}`,
-    `async function renderRouteHtml(route, params, options = {}) {`,
-    `  const context = createPageContext(route, params)`,
-    `  const node = await route.layout(context)`,
-    `  const body = await new Response((await prerender(node)).prelude).text()`,
-    `  const html = /^\\s*<!doctype\\s/i.test(body) ? body : "<!doctype html>" + body`,
-    `  return injectRouteHtmlAssets(html, options)`,
-    `}`,
-    `export async function render(url, options = {}) {`,
-    `  const routes = await getRoutes()`,
-    `  const match = matchRoute(routes, url)`,
-    `  if (!match) return undefined`,
-    `  const html = await renderRouteHtml(match.route, match.params, options)`,
-    `  return createRenderResult(match.route, match.params, html)`,
-    `}`,
-    `export async function renderMatchedRoute(route, params, options = {}) {`,
-    `  return renderRouteHtml(route, params, options)`,
     `}`,
   ].join("\n")
 }
@@ -1110,40 +1427,6 @@ function routePathToHtmlFile(
   return trailingSlash
     ? path.join(root, normalizedRoutePath, "index.html")
     : path.join(root, `${normalizedRoutePath}.html`)
-}
-
-function staticPageFileToPath(file: string) {
-  const route = file
-    .replace(/^src\/pages/, "")
-    .replace(/\/index\.(tsx|mdx)$/, "/")
-    .replace(/\.(tsx|mdx)$/, "")
-
-  return normalizeRoutePath(route || "/")
-}
-
-function hasRouteParams(file: string) {
-  return /\[[^\]]+\]/.test(file)
-}
-
-function hasContentExport(code: string) {
-  return /\bexport\s+const\s+content\b/.test(code)
-}
-
-function hasDataExport(code: string) {
-  return /\bexport\s+const\s+data\b/.test(code)
-}
-
-function readJsonData(
-  value: unknown,
-  file: string
-): { [key: string]: JsonValue } {
-  const data = readJsonValue(value, file, "data", new WeakSet<object>())
-
-  if (!data || typeof data !== "object" || Array.isArray(data)) {
-    throw new Error(`Data export in "${file}" must be a JSON object.`)
-  }
-
-  return data
 }
 
 function parseMdxFrontmatter(
@@ -1167,14 +1450,17 @@ function parseMdxFrontmatter(
   return readJsonData(value, file)
 }
 
-function validatePageData(data: { [key: string]: JsonValue }, file: string) {
-  for (const key of ["path", "children"]) {
-    if (Object.hasOwn(data, key)) {
-      throw new Error(
-        `Page data in "${file}" cannot define reserved key "${key}".`
-      )
-    }
+function readJsonData(
+  value: unknown,
+  file: string
+): { [key: string]: JsonValue } {
+  const data = readJsonValue(value, file, "data", new WeakSet<object>())
+
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    throw new Error(`Data in "${file}" must be a JSON object.`)
   }
+
+  return data
 }
 
 function readJsonValue(
@@ -1185,10 +1471,19 @@ function readJsonValue(
 ): JsonValue {
   if (
     typeof value === "string" ||
-    typeof value === "number" ||
     typeof value === "boolean" ||
     value === null
   ) {
+    return value
+  }
+
+  if (typeof value === "number") {
+    if (!Number.isFinite(value)) {
+      throw new Error(
+        `Data in "${file}" contains a non-finite number at ${keyPath}.`
+      )
+    }
+
     return value
   }
 
@@ -1231,29 +1526,16 @@ function readJsonValue(
   )
 }
 
-function normalizeRoutePath(path: string) {
-  if (!path || path === "/") return "/"
-  return `/${path.replace(/^\/+|\/+$/g, "")}`
-}
-
-function routePathToPublicPath(path: string, trailingSlash: boolean) {
-  if (path === "/") return "/"
-
-  return trailingSlash ? `${path.replace(/\/$/, "")}/` : path.replace(/\/$/, "")
+function createPageUrl(siteUrl: string, pagePath: string) {
+  return new URL(pagePath, siteUrl).href
 }
 
 async function findBuildPublicRoot(root: string) {
-  for (const publicRoot of [path.join(root, "dist")]) {
-    try {
-      await access(path.join(publicRoot, ".vite/manifest.json"))
-      return publicRoot
-    } catch {
-      // Try the next build output.
-    }
-  }
+  const publicRoot = path.join(root, "dist")
 
-  await mkdir(path.join(root, "dist"), { recursive: true })
-  return path.join(root, "dist")
+  await mkdir(publicRoot, { recursive: true })
+
+  return publicRoot
 }
 
 async function readManifest(publicRoot: string): Promise<Manifest> {
@@ -1263,10 +1545,6 @@ async function readManifest(publicRoot: string): Promise<Manifest> {
   } catch {
     return {}
   }
-}
-
-function renderStylesheetTags(hrefs: string[]) {
-  return hrefs.map((href) => `<link href="${href}" rel="stylesheet">`).join("")
 }
 
 function renderReactRefreshFallbackScript() {
@@ -1282,20 +1560,65 @@ function readRouteStylesheetHrefs(
 }
 
 function readRouteStylesheetAssets(
-  graph: EnvironmentModuleGraph,
+  chunks: BuildOutputChunk[],
   root: string,
   routeFile: string,
   cssAssetMap: Map<string, string>
 ) {
   const assets = new Set<string>()
 
-  for (const file of collectRouteCssFiles(graph, root, routeFile)) {
+  for (const file of collectRouteCssFilesFromChunks(chunks, root, routeFile)) {
     const asset = cssAssetMap.get(file)
 
     if (asset) assets.add(asset)
   }
 
   return [...assets]
+}
+
+function collectRouteCssFilesFromChunks(
+  chunks: BuildOutputChunk[],
+  root: string,
+  routeFile: string
+) {
+  const absoluteRouteFile = normalizePath(path.join(root, routeFile))
+  const chunksByFileName = new Map(
+    chunks.map((chunk) => [chunk.fileName, chunk])
+  )
+  const matchesRoute = (id: string) =>
+    normalizeModuleFile(root, id) === absoluteRouteFile
+  const entry =
+    chunks.find(
+      (chunk) => chunk.facadeModuleId && matchesRoute(chunk.facadeModuleId)
+    ) ?? chunks.find((chunk) => (chunk.moduleIds ?? []).some(matchesRoute))
+
+  if (!entry) return []
+
+  const cssFiles = new Set<string>()
+  const seen = new Set<BuildOutputChunk>()
+  const queue = [entry]
+
+  while (queue.length > 0) {
+    const chunk = queue.pop()
+
+    if (!chunk || seen.has(chunk)) continue
+
+    seen.add(chunk)
+
+    for (const id of chunk.moduleIds ?? []) {
+      const file = normalizeCssModuleFile(root, id)
+
+      if (file) cssFiles.add(file)
+    }
+
+    for (const imported of chunk.imports ?? []) {
+      const next = chunksByFileName.get(imported)
+
+      if (next) queue.push(next)
+    }
+  }
+
+  return [...cssFiles]
 }
 
 function collectRouteCssFiles(
@@ -1442,13 +1765,6 @@ function readManifestChunkCss(entry: Manifest[string] | undefined) {
   }
 
   return [...assets]
-}
-
-function stripViteClientScript(html: string) {
-  return html.replace(
-    /<script\b[^>]*\bsrc=(["'])\/@vite\/client\1[^>]*>\s*<\/script>/g,
-    ""
-  )
 }
 
 function publicAssetPath(file: string) {

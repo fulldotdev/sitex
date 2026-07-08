@@ -32,3 +32,6 @@ coverage/
 
 # Local Netlify folder
 .netlify
+
+# generated shadcn registry
+apps/docs/public/r/

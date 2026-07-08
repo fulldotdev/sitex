@@ -1,64 +1,35 @@
 ---
 layout: "doc"
 title: "Page rendering"
-description: "How SiteX renders static pages, dynamic pages, and route CSS."
-order: 8
+description: "How Sitex renders pages, injects the head, and includes route CSS."
 ---
 
 ## Overview
 
-Sitex renders pages to HTML at build time.
+Sitex renders every page to HTML at build time. Vite processes the framework-owned HTML entry, then Sitex injects the app-rendered head and body into that transformed template.
 
-## Static Routes
+Read [SEO and head](/docs/seo) for the recommended app-owned metadata component.
 
-Static routes are the default.
+## Static Output
 
-```tsx
-export default function AboutPage() {
-  return (
-    <html lang="en">
-      <head>
-        <title>About</title>
-      </head>
-      <body>
-        <h1>About</h1>
-      </body>
-    </html>
-  )
-}
-```
-
-Dynamic static routes export `paths`. Sitex renders one HTML file for each path.
-
-```tsx
-export const paths = [
-  { params: { slug: "alpha" } },
-  { params: { slug: "beta" } },
-]
-
-export default function Page({ params }) {
-  return <h1>{params.slug}</h1>
-}
-```
+`vp build` writes one HTML file per page, plus `sitemap.xml` and `robots.txt`. There is no server at request time — deploy the `dist` folder to any static host.
 
 ## CSS Assets
 
-Import CSS from routes, layouts, or components. SiteX includes the CSS needed by each rendered route.
+Create `src/index.css` and import it from your base layout. Tailwind, CSS modules, plain CSS, or another CSS tool can live in the app.
 
-Global CSS usually belongs in `src/layouts/base.tsx`.
-
-```tsx
-import "@/styles/globals.css"
-
-export default function BaseLayout({ children }) {
-  return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
-  )
+```css
+body {
+  margin: 0;
 }
 ```
 
-## Interactive Components
+Route-specific CSS can still be imported from layouts or components. Sitex follows each page's module graph and includes the CSS that page needs.
 
-Pages stay static until an imported component opts into client rendering. Read [Component rendering](/docs/island-rendering) for client directives and island boundaries.
+## Island Script
+
+Pages ship zero JavaScript by default. When a page contains at least one island, Sitex adds the island client script to that page only. Read [Component rendering](/docs/island-rendering).
+
+## Development Server
+
+`vp dev` renders pages on the fly with the same document pipeline, so the head you see in development matches the build output.

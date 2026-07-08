@@ -1,34 +1,39 @@
 ---
 layout: "doc"
 title: "Introduction"
-description: "A simpler, Vite-based React framework for building fast websites with local data."
-order: 1
+description: "An opinionated, Vite-based React framework for building fast content sites."
 ---
 
 ## Overview
 
-Sitex renders React routes to fast static HTML by default, while island architecture lets you add browser interactivity exactly where a page needs it.
+Sitex is an opinionated React framework for content sites. Pages are MDX documents with typed frontmatter. Structure, chrome, and design live in TSX layouts and components. Every page renders to static HTML at build time.
 
-Routes are local TSX files. Sitex maps them to URLs, keeps routing explicit and file-based. Read more in [Page routing](/docs/page-routing).
+The framework handles the boring parts that should always be the same: routing, Vite HTML transforms, asset loading, island scripts, sitemap, and robots.txt. Your layouts render document tags, metadata, and CSS imports with normal TSX. Read [SEO and head](/docs/seo).
 
-Imported components can opt into client rendering with directives like `client:load`, `client:visible`, and `client:idle`. Read more in [Island rendering](/docs/island-rendering).
+Imported components can opt into client rendering with directives like `client:load`, `client:visible`, and `client:idle`. Read [Component rendering](/docs/island-rendering).
 
-Static routes, route-level CSS, and island assets are handled by Vite's module graph. Read more in [Rendering and assets](/docs/rendering-and-assets).
+## The Model
 
-## Use cases
+1. `src/pages/**/*.mdx` — routable content documents with typed frontmatter.
+2. `src/layouts/**/*.tsx` — page structure and chrome, selected by the `layout` field.
+3. `src/components/**/*.tsx` — blocks, UI primitives, and islands.
+4. Site config in `vite.config.ts` — stable site facts for output, sitemap, robots, and app helpers.
 
-Sitex is intended for simple content-based websites like landing pages, marketing sites, and documentation. It is especially useful when that content site belongs to a larger product that also has an app-like dashboard built with something like Next.js or TanStack.
+This split is strict on purpose. Because every page is a content document flowing through the same pipeline, metadata and structured data are always complete — and pages are simple enough that an AI agent or a teammate can add one without touching React.
 
-In that setup, the content site can reuse the same React components and design system as the app, but render them statically instead of dynamically.
+## Use Cases
 
-We like building with the React ecosystem. We want to use React components, Vite, TypeScript, Shadcn/ui, and the rest of the ecosystem while still producing extremely fast websites.
+Sitex is intended for content-based websites: landing pages, marketing sites, documentation, and blogs. It is especially useful when the content site belongs to a larger product that also has an app-like dashboard built with something like Next.js or TanStack, because both can share the same React components and design system.
 
-## Sitex versus Astro
+## Sitex Versus Astro
 
 We love Astro. Fulldev sponsors Astro monthly, and Sitex is mostly inspired by Astro's static-first model and island architecture.
 
-Astro already proves that this model works. Sitex is not trying to replace Astro; it is an experiment around one specific difference.
+Sitex differs in two ways. First, everything around content is React: layouts, blocks, UI, metadata, and islands are plain TSX with client directives, so there is no second component syntax. Second, Sitex keeps routes as MDX documents while leaving app-specific head composition in your layouts.
 
-In Astro, client directives are placed on framework components from inside Astro components. That can make it harder to build the whole website with React components, and you often end up with duplicate components in both `.astro` and `.tsx` syntax to work around that.
+## Next Steps
 
-Because of this, at Fulldev we've even built [a UI library for Astro](https://ui.full.dev) to work around that limitation. Sitex is the experiment in the other direction: keep the Astro-inspired static output and island architecture, but let client directives be used from TSX so the app feels like a normal React and Vite project.
+1. Read [Installation](/docs/installation) to set up a project.
+2. Read [Pages](/docs/pages) for the frontmatter schema.
+3. Read [Layouts](/docs/layouts) for typed layout props.
+4. Read [SEO and head](/docs/seo) for document metadata.

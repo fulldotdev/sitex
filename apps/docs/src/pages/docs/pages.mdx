@@ -1,0 +1,126 @@
+---
+layout: "doc"
+title: "Pages"
+description: "Create pages with MDX files, typed frontmatter, and a TSX layout."
+---
+
+## Overview
+
+Every Sitex page is an MDX file in `src/pages`. A page is a content document: frontmatter describes what the page is, the Markdown body is the content, and a TSX layout from `src/layouts` renders it.
+
+```mdx
+---
+layout: "doc"
+title: "Installation"
+description: "Install Sitex and create your first page."
+---
+
+## First heading
+
+Page content written in Markdown.
+```
+
+TSX files are not allowed in `src/pages`. Page structure belongs in layouts and components, so every route flows through the same metadata and rendering pipeline.
+
+## File Mapping
+
+Files map to URLs by their path inside `src/pages`.
+
+1. `src/pages/index.mdx` becomes `/`.
+2. `src/pages/about.mdx` becomes `/about`.
+3. `src/pages/docs/index.mdx` becomes `/docs`.
+4. `src/pages/docs/pages.mdx` becomes `/docs/pages`.
+
+Routes are static. Every page is rendered to HTML at build time.
+
+## Required Frontmatter
+
+Every page must define three fields.
+
+```yaml
+layout: "doc" # renders with src/layouts/doc.tsx
+title: "Pages"
+description: "Create pages with MDX files."
+```
+
+That is the whole required contract. Layouts can pass these fields directly to `LayoutHead`.
+
+## Optional Frontmatter
+
+```yaml
+type: "webpage" # webpage | article | faq — controls structured data
+image: "/covers/pages.png" # social image, falls back to the site image
+canonical: "https://example.com/original" # canonical URL override
+noindex: true # adds a noindex robots tag and removes the page from the sitemap
+```
+
+## Article Pages
+
+Pages with `type: article` emit Article structured data and require `publishedAt`.
+
+```yaml
+type: "article"
+layout: "post"
+title: "Building with Sitex"
+description: "How content documents keep pages simple."
+publishedAt: "2026-07-06"
+updatedAt: "2026-07-06" # optional
+author: "Sil" # optional
+```
+
+## FAQ Pages
+
+`LayoutHead` accepts explicit `jsonLd` when a page needs FAQPage structured data.
+
+```yaml
+type: "faq"
+layout: "doc"
+title: "Frequently asked questions"
+description: "Answers about Sitex."
+questions:
+  - question: "Is Sitex static?"
+    answer: "Yes. Every page renders to HTML at build time."
+  - question: "Can pages ship JavaScript?"
+    answer: "Only through islands that opt in with client directives."
+```
+
+## Extra Fields
+
+Any other frontmatter field is passed to the layout as a prop and exposed through the [Pages API](/docs/content). Use extra fields for page facts, not presentation.
+
+```yaml
+layout: "home"
+title: "Sitex"
+description: "An opinionated React framework for content sites."
+hero:
+  title: "Build content sites with React."
+  description: "MDX pages, TSX layouts, zero boilerplate."
+```
+
+Reserved keys: `path`, `url`, `locale`, `children`, and `headings` cannot be defined in frontmatter.
+
+## React Components
+
+Import React components directly in the MDX body.
+
+```mdx
+import { Alert } from "@/components/ui/alert"
+
+<Alert>Use MDX for content, TSX for structure.</Alert>
+```
+
+A fully custom page is one component in an otherwise empty body:
+
+```mdx
+---
+layout: "base"
+title: "Pricing"
+description: "Simple pricing for teams."
+---
+
+import PricingPage from "@/components/blocks/pricing-page"
+
+<PricingPage />
+```
+
+Use [MDX components](/docs/mdx-components) to customize Markdown elements across pages.

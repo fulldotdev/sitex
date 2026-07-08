@@ -1,8 +1,7 @@
 ---
 layout: "doc"
 title: "Installation"
-description: "Install SiteX and add the Vite and TypeScript configuration."
-order: 2
+description: "Install Sitex, add the site config, and create your first page."
 ---
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
@@ -10,7 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 <Alert className="border-primary/25 bg-primary/10 py-4 shadow-sm">
   <AlertTitle>Installing with an AI agent?</AlertTitle>
   <AlertDescription className="mt-1 leading-6">
-    Share this page URL with your agent and ask it to follow the SiteX
+    Share this page URL with your agent and ask it to follow the Sitex
     installation instructions exactly.
   </AlertDescription>
 </Alert>
@@ -20,41 +19,105 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 Give your agent this instruction from inside the project you want to set up:
 
 ```text
-Read https://sitex.full.dev/docs/installation and install SiteX in this project.
+Read https://sitex.full.dev/docs/installation and install Sitex in this project.
 
-Follow the manual install steps on that page: install the package, add the Vite plugin,
-extend the SiteX TypeScript config, and create the first page.
+Follow the manual install steps on that page: install the package, add the Vite plugin
+with the site config, create global CSS, extend the Sitex TypeScript config, and create
+the first layout and page.
 ```
 
 ## Manual Install
 
-Install SiteX, React, Vite+, and the Vite packages your app needs.
+Install Sitex, React, Vite+, and the Vite packages your app needs. The example below includes Tailwind; omit `tailwindcss`, `@tailwindcss/vite`, and the Tailwind plugin if your app uses another CSS setup.
 
 ```bash
-pnpm add @fulldotdev/sitex react react-dom vite vite-plus @vitejs/plugin-react
+pnpm add @fulldotdev/sitex react react-dom vite vite-plus @vitejs/plugin-react tailwindcss
+pnpm add -D @tailwindcss/vite
 pnpm add -D typescript @types/react @types/react-dom
 ```
 
 ## Vite Config
 
-Add the SiteX plugin to `vite.config.ts`. Set `appType` to `custom` so Vite does not expect a normal single-page app fallback.
+Add the Sitex plugin to `vite.config.ts`. The `site` config only needs `url`; Sitex uses it for sitemap and robots output. Sitex sets Vite's custom app mode. Add the Tailwind plugin only when the app uses Tailwind.
 
 ```ts
 import { defineConfig } from "vite-plus"
 import { sitex } from "@fulldotdev/sitex/plugin"
+import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 
 export default defineConfig({
-  appType: "custom",
-  plugins: [react(), sitex()],
+  plugins: [
+    react(),
+    sitex({
+      site: {
+        url: "https://example.com",
+      },
+    }),
+    tailwindcss(),
+  ],
 })
 ```
 
-SiteX writes slashless URLs by default. Pass `sitex({ trailingSlash: true })` if you want directory index output and trailing-slash paths.
+Sitex writes slashless URLs by default. Pass `trailingSlash: true` if you want directory index output and trailing-slash paths. Read [SEO and head](/docs/seo) for the recommended app-owned metadata component.
+
+## Global CSS
+
+Create `src/index.css` and import it from your base layout.
+
+```css
+@import "tailwindcss";
+@import "@fontsource-variable/geist";
+
+:root {
+  --font-sans: "Geist Variable", sans-serif;
+}
+```
+
+```tsx
+// src/layouts/base.tsx
+import "@/index.css"
+```
+
+Add app-wide CSS, font imports, theme tokens, and Tailwind layers here. If your app uses Tailwind, install `tailwindcss` and `@tailwindcss/vite`, add the Tailwind Vite plugin, and import Tailwind from this file.
+
+## Global Content
+
+Create `src/globals/index.yaml` for shared site chrome content. The root locale name comes from `site.locale` (default `"en"`) and sets `<html lang>`; files like `src/globals/nl.yaml` define locale variants served under `/nl` routes. Layouts import `sitex:globals` for header, sidebar, footer, logo, and shared labels.
+
+```yaml
+name: My Site
+logo:
+  label: My Site
+  href: /
+header:
+  navigation:
+    - label: Home
+      href: /
+    - label: Docs
+      href: /docs
+```
+
+```tsx
+import globals from "sitex:globals"
+
+export default function DefaultLayout({ children }: LayoutProps) {
+  return (
+    <>
+      <header>
+        <a href={globals.logo.href}>{globals.logo.label}</a>
+      </header>
+      <main>{children}</main>
+    </>
+  )
+}
+```
+
+The Vite `site` config is for document metadata and derived SEO output. `src/globals/index.yaml` is for visible, reusable site content.
 
 ## TypeScript Config
 
-Extend the SiteX TypeScript config so JSX client directives like `client:load`, `client:only`, `client:visible`, `client:idle`, and `client:media` are accepted.
+Extend the Sitex TypeScript config so JSX client directives are accepted and generated page typechecks are included.
 
 ```json
 {
@@ -74,31 +137,48 @@ Extend the SiteX TypeScript config so JSX client directives like `client:load`, 
 }
 ```
 
-## First Page
+Add the generated `.sitex` directory to `.gitignore` — Sitex rewrites it on every dev run and build.
 
-Create `src/pages/index.tsx`.
+## First Layout
+
+Create `src/layouts/default.tsx`. Layouts return page content.
 
 ```tsx
-export default function HomePage() {
+import type { LayoutProps } from "@fulldotdev/sitex"
+
+export default function DefaultLayout({ title, children }: LayoutProps) {
   return (
-    <html lang="en">
-      <head>
-        <title>My SiteX site</title>
-        <meta name="description" content="My first SiteX page." />
-      </head>
-      <body>
-        <h1>Hello from SiteX</h1>
-      </body>
-    </html>
+    <main>
+      <h1>{title}</h1>
+      {children}
+    </main>
   )
 }
 ```
 
-`src/pages/index.tsx` becomes `/`. Read [Routing](/docs/page-routing) for file-to-URL behavior, or [MDX pages](/docs/mdx) for prose pages with `src/layouts`.
+## First Page
+
+Create `src/pages/index.mdx`.
+
+```mdx
+---
+layout: "default"
+title: "My Site"
+description: "My first Sitex page."
+---
+
+Hello from Sitex.
+```
+
+`src/pages/index.mdx` becomes `/`. Read [Pages](/docs/pages) for the frontmatter schema.
+
+## Favicon
+
+Sitex generates `/favicon.svg` when you do not provide `public/favicon.svg`.
 
 ## Build Behavior
 
-SiteX runs through Vite+.
+Sitex runs through Vite+.
 
 ```bash
 vp dev
@@ -106,12 +186,12 @@ vp build
 vp preview
 ```
 
-`vp dev` starts the development server. `vp build` writes one HTML file per static route, includes production CSS, and adds the island client script only when a page needs client rendering. `vp preview` serves the built output locally.
+`vp dev` starts the development server. `vp build` processes the framework-owned Vite HTML entry, writes one HTML file per page with the app-rendered head and body, plus `sitemap.xml` and `robots.txt`, and adds the island client script only when a page needs client rendering. `vp preview` serves the built output locally.
 
 ## Next Steps
 
-1. Read [Routing](/docs/page-routing) for the route types.
-2. Read [TSX pages](/docs/tsx-pages) for static and dynamic routes.
-3. Read [MDX pages](/docs/mdx) for prose pages with layouts.
-4. Read [Pages API](/docs/content) for indexes, cards, and navigation from route metadata.
+1. Read [Pages](/docs/pages) for the frontmatter schema.
+2. Read [Layouts](/docs/layouts) for typed layout props and document options.
+3. Read [SEO and head](/docs/seo) for the app-owned metadata component.
+4. Read [Pages API](/docs/content) for indexes, cards, and navigation from page data.
 5. Read [Component rendering](/docs/island-rendering) for browser interactivity.

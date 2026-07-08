@@ -1,48 +1,21 @@
 ---
 layout: "doc"
 title: "Pages API"
-description: "Share route metadata with typed getPages and getPage helpers."
-order: 6
+description: "Read page frontmatter across the site with typed getPages and getPage helpers."
 ---
 
 ## Overview
 
-Static route files can export JSON page data. Sitex exposes that data through `sitex:pages`, so indexes, cards, sidebars, and metadata can use route-owned values.
-
-Dynamic routes with bracket params are not included.
-
-## data export
-
-Add `export const data` to a static TSX route.
-
-```tsx
-type PostData = {
-  title: string
-  description: string
-  publishedAt: string
-}
-
-export const data = {
-  title: "Building content sites with React",
-  description: "How route-owned content keeps pages local.",
-  publishedAt: "2026-06-03",
-} satisfies PostData
-
-export default function PostPage() {
-  return <h1>{data.title}</h1>
-}
-```
-
-MDX pages use frontmatter as page data.
+Every page's frontmatter is available through `sitex:pages`, so indexes, cards, sidebars, and navigation can use page-owned values. Layouts and components query it — pages stay plain content documents.
 
 ## getPages
 
-Use `getPages` to read all discovered page data, or pass a slash-prefixed path prefix.
+Use `getPages` to read all pages, or pass a slash-prefixed path prefix.
 
 ```tsx
 import { getPages } from "sitex:pages"
 
-export default async function BlogPage() {
+export default async function BlogIndex() {
   const posts = await getPages("/blog")
 
   return (
@@ -79,35 +52,31 @@ export default async function FeaturedPost() {
 
 The return value is `Page | undefined`.
 
-## TypeScript
+## The Page Type
 
-SiteX writes generated `sitex:pages` types from discovered page data.
+Because every page follows the same frontmatter schema, `Page` is a stable type — no code generation involved.
 
 ```ts
 type Page = {
   path: string
+  layout: string
   title: string
-  description?: string
+  description: string
+  type?: "webpage" | "article" | "faq"
+  image?: string
+  canonical?: string
+  noindex?: boolean
   publishedAt?: string
+  updatedAt?: string
+  author?: string
+  questions?: FaqQuestion[]
+  headings: MarkdownHeading[]
+  [key: string]: JsonValue | undefined
 }
 ```
 
-Use `satisfies` when a group of pages should share one data shape.
+Extra frontmatter fields are included with the `JsonValue` index signature. Narrow them where you use them, or wrap `getPages` in an app-owned helper that asserts your shape.
 
-## Limits
+## Async Components
 
-`data` can use imported values, constants, and helper functions, but the final value must be JSON-serializable.
-
-```ts
-import { defaultAuthor } from "@/data/authors"
-
-export const data = {
-  title: "Building content sites with React",
-  author: defaultAuthor.name,
-  tags: ["react", "content"],
-}
-```
-
-Use strings, numbers, booleans, arrays, plain objects, and `null`. Do not use JSX, functions, class instances, dates, maps, sets, or cyclic values.
-
-Because route modules run during discovery, top-level page code must be build-safe. Avoid browser-only globals and network side effects.
+`getPages` and `getPage` are async, so use them in async components. Every page renders at build time, so async components are fine anywhere in a layout tree.
