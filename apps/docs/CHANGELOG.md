@@ -1,5 +1,12 @@
 # docs
 
+## 0.0.2
+
+### Patch Changes
+
+- Updated dependencies [[`77fe7ea`](https://github.com/fulldotdev/sitex/commit/77fe7eac8d79ec99ca7bbccf8442793f99acce85)]:
+  - @fulldotdev/sitex@0.4.1
+
 ## 0.0.1
 
 ### Patch Changes
