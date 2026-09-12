@@ -17,10 +17,15 @@ pnpm dlx shadcn@latest add https://sitex.full.dev/r/code.json
 Wire it up as the MDX `pre` component in `vite.config.ts`:
 
 ```ts
-import { sitex } from "sitex"
+import { defineConfig } from "vite-plus"
+import { sitex } from "@fulldotdev/sitex/plugin"
+import react from "@vitejs/plugin-react"
 
 export default defineConfig({
-  plugins: [sitex({ mdx: { components: { pre: "@/components/ui/code" } } })],
+  plugins: [
+    react(),
+    sitex({ mdx: { components: { pre: "@/components/ui/code" } } }),
+  ],
 })
 ```
 
@@ -30,7 +35,7 @@ Every fenced code block in your MDX pages now renders through this component. Fo
 import { Code } from "@/components/ui/code"
 
 export function InstallSnippet() {
-  return <Code code="pnpm add sitex" lang="bash" />
+  return <Code code="pnpm add @fulldotdev/sitex" lang="bash" />
 }
 ```
 
