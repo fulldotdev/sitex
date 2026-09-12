@@ -55,6 +55,7 @@ import {
   packageFile,
   ssrBuildDir,
 } from "./paths.ts"
+import { collectIslandEntryPatterns } from "./optimize.ts"
 import { writeMdxTypecheckFiles } from "./typecheck.ts"
 import {
   createJavaScriptModule,
@@ -133,6 +134,10 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
         resolve: {
           dedupe: ["react", "react-dom"],
           tsconfigPaths: true,
+        },
+        optimizeDeps: {
+          entries: collectIslandEntryPatterns(configRoot),
+          include: ["react", "react-dom/client", "react/jsx-runtime"],
         },
         build: {
           assetsDir: "assets",
