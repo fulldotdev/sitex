@@ -12,7 +12,9 @@ import {
 import "@/index.css"
 
 import { Sidebar1 } from "@/components/blocks/sidebar-1"
+import { ThemeScript } from "@/components/ui/theme-toggle"
 import { globals } from "@/lib/globals"
+import { theme } from "@/lib/theme"
 
 export type BaseLayoutProps = LayoutHeadProps & {
   path: LayoutProps["path"]
@@ -33,13 +35,7 @@ export default function BaseLayout({
   return (
     <Layout>
       <LayoutHead {...head} name={globals.name}>
-        {/* Apply the stored theme before first paint to avoid a flash. Must
-            mirror the ThemeProvider defaults in blocks/sidebar-1.tsx. */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("vite-ui-theme")||"dark";var d=t==="dark"||(t==="system"&&matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.add(d?"dark":"light")}catch(e){}})()`,
-          }}
-        />
+        <ThemeScript {...theme} />
       </LayoutHead>
       <LayoutBody>
         <Sidebar1
@@ -47,7 +43,6 @@ export default function BaseLayout({
           sections={globals.sidebar.sections}
           githubRepo={globals.header.githubRepo}
           path={path}
-          client:idle
         >
           <LayoutMain className="min-h-0 flex-1 overflow-y-auto">
             {children}
