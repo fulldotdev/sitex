@@ -143,7 +143,7 @@
       "name": "theme-toggle",
       "type": "registry:ui",
       "title": "Theme Toggle",
-      "description": "Light/dark theme provider and toggle button.",
+      "description": "Light/dark toggle button with a head script that prevents theme flash.",
       "dependencies": ["lucide-react"],
       "registryDependencies": ["utils"],
       "files": [
