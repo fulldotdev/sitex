@@ -22,5 +22,5 @@ pnpm ready
 
 - Keep the public API small: the Vite plugin, the type exports, the TypeScript config, and the `client:*` directives.
 - Pages are static MDX files rendered through app layouts. Document the decision before adding rendering modes, generated routes, or content collections.
-- UI components live in `packages/ui` and ship through the shadcn registry, not npm.
+- UI components live in `apps/docs/src/components/ui` and ship through the shadcn registry (`apps/docs/registry.json`), not npm. The docs app uses the same files, so there is one source.
 - The docs app in `apps/docs` is the reference app; keep it a simple content site.

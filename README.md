@@ -6,7 +6,7 @@ package.
 ## Structure
 
 ```txt
-apps/docs/        # SiteX docs and reference app
+apps/docs/        # Sitex docs, reference app, and the shadcn registry source
 packages/sitex/   # @fulldotdev/sitex package source
 ```
 
