@@ -57,7 +57,8 @@ export function transformClientDirectives(
   code: string,
   id: string,
   root: string,
-  registry: HydrationRegistry
+  registry: HydrationRegistry,
+  islandModuleId: string
 ) {
   const ast = parseHydrationSource(code, id)
   const imports = readImports(ast, id, root)
@@ -100,18 +101,17 @@ export function transformClientDirectives(
 
   if (replacements.length === 0) return
 
+  const importCode = `import { SitexIsland } from ${JSON.stringify(islandModuleId)}\n`
+
   return applyReplacements(
-    `import { SitexIsland } from "@fulldotdev/sitex/island"\n${code}`,
+    `${importCode}${code}`,
     replacements.map((replacement) => ({
       ...replacement,
-      end: replacement.end + codeImportOffset,
-      start: replacement.start + codeImportOffset,
+      end: replacement.end + importCode.length,
+      start: replacement.start + importCode.length,
     }))
   )
 }
-
-const codeImportOffset =
-  'import { SitexIsland } from "@fulldotdev/sitex/island"\n'.length
 
 function parseHydrationSource(code: string, id: string) {
   return parseAst(

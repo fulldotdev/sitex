@@ -284,8 +284,6 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
         await rm(path.join(root, "dist"), { recursive: true, force: true })
       }
 
-      writeGlobalsTypes(root, options)
-
       const files = await fg("src/**/*.tsx", {
         cwd: root,
         onlyFiles: true,
@@ -304,7 +302,13 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
         })
       )
 
-      await writeMdxTypecheckFiles(root, options)
+      // The client and ssr environments both run buildStart. Generated type
+      // files are shared, so only one environment may write them or the
+      // concurrent rm/write cycles race each other.
+      if (writesGeneratedFiles(this.environment.name)) {
+        writeGlobalsTypes(root, options)
+        await writeMdxTypecheckFiles(root, options)
+      }
     },
 
     resolveId: {
@@ -367,7 +371,20 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
 
         if (!id.endsWith(".tsx") || !code.includes("client:")) return
 
-        return transformClientDirectives(code, id, root, hydration)
+        // Browser bundles get a wrapper that only reproduces the island
+        // markup; the server wrapper prerenders children with react-dom/static.
+        const islandModule =
+          this.environment.name === "client"
+            ? packageFile("hydration/island-client", "tsx")
+            : packageFile("hydration/server", "tsx")
+
+        return transformClientDirectives(
+          code,
+          id,
+          root,
+          hydration,
+          normalizePath(islandModule)
+        )
       },
     },
 
@@ -491,12 +508,14 @@ function sitexPlugin(options: ResolvedSitexOptions): Plugin {
           )
         }
 
-        if (file.includes("/src/pages/") && file.endsWith(".mdx")) {
-          await writeMdxTypecheckFiles(root, options)
-        }
+        if (writesGeneratedFiles(this.environment.name)) {
+          if (file.includes("/src/pages/") && file.endsWith(".mdx")) {
+            await writeMdxTypecheckFiles(root, options)
+          }
 
-        if (isGlobalsFile(relativeFile)) {
-          writeGlobalsTypes(root, options)
+          if (isGlobalsFile(relativeFile)) {
+            writeGlobalsTypes(root, options)
+          }
         }
 
         this.environment.hot.send({ type: "full-reload" })
@@ -1018,6 +1037,10 @@ function isRetryableRemoveError(error: unknown) {
   )
 }
 
+function writesGeneratedFiles(environmentName: string) {
+  return environmentName === "ssr"
+}
+
 function isTsxPageFile(file: string) {
   return file.startsWith("src/pages/") && file.endsWith(".tsx")
 }
@@ -1051,6 +1074,7 @@ function invalidateVirtualModules(
   const invalidatedModules = new Set<EnvironmentModuleNode>()
 
   for (const id of [
+    resolvedVirtualHydrationId,
     resolvedVirtualRoutesId,
     resolvedVirtualPagesId,
     resolvedVirtualGlobalsId,

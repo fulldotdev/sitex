@@ -6,6 +6,7 @@ export default defineConfig({
       index: "src/index.ts",
       "vite/plugin": "src/vite/plugin.ts",
       "hydration/client": "src/hydration/client.tsx",
+      "hydration/island-client": "src/hydration/island-client.tsx",
       "hydration/server": "src/hydration/server.tsx",
       "prefetch/client": "src/prefetch/client.ts",
       "render/render": "src/render/render.tsx",
