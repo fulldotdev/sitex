@@ -57,4 +57,4 @@ function HeaderGroup({ className, ...props }: React.ComponentProps<"div">) {
   )
 }
 
-export { Header, HeaderContainer, HeaderGroup }
+export { Header, HeaderContainer, HeaderGroup, headerVariants }

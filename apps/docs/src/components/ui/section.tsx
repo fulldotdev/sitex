@@ -40,6 +40,7 @@ function SectionContainer({
 }: React.ComponentProps<"div">) {
   return (
     <div
+      data-slot="section-container"
       className={cn(
         "relative mx-auto flex w-full max-w-7xl flex-col gap-8 px-4",
         className
@@ -49,4 +50,4 @@ function SectionContainer({
   )
 }
 
-export { Section, SectionContainer }
+export { Section, SectionContainer, sectionVariants }

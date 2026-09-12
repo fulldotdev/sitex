@@ -13,7 +13,6 @@ export default defineConfig({
     jsPlugins: [{ name: "vite-plus", specifier: "vite-plus/oxlint-plugin" }],
     ignorePatterns: [
       "apps/*/dist/**",
-      "apps/docs/src/components/ui/**",
       "apps/docs/src/hooks/use-mobile.ts",
       "packages/sitex/**",
       "packages/*/dist/**",

@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vp dev --host 127.0.0.1 --port 4323",
-    "build": "vp build && tsc --noEmit",
-    "preview": "vp preview --host 127.0.0.1 --port 4323"
+    "build": "shadcn build && vp build && tsc --noEmit",
+    "preview": "vp preview --host 127.0.0.1 --port 4323",
+    "registry:build": "shadcn build"
   },
   "dependencies": {
     "@base-ui/react": "catalog:",

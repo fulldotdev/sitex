@@ -1,5 +1,5 @@
 [build]
-command = "pnpm --filter @fulldotdev/sitex build && pnpm --filter @fulldotdev/ui build && pnpm --filter docs build"
+command = "pnpm build"
 publish = "apps/docs/dist"
 
 [build.environment]
