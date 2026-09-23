@@ -35,3 +35,7 @@ coverage/
 
 # generated shadcn registry
 apps/docs/public/r/
+
+/test-results/
+/playwright-report/
+/screenshots/
