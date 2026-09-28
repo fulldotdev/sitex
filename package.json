@@ -12,11 +12,16 @@
     "preview": "vp run docs#preview",
     "changeset": "changeset",
     "release": "changeset version && pnpm install --lockfile-only",
-    "release:publish": "vp run -r build && changeset publish"
+    "release:publish": "vp run -r build && changeset publish",
+    "test:visual": "pnpm build && playwright test"
   },
   "devDependencies": {
+    "@argos-ci/cli": "catalog:",
+    "@argos-ci/playwright": "catalog:",
     "@changesets/changelog-github": "catalog:",
     "@changesets/cli": "catalog:",
+    "@playwright/test": "catalog:",
+    "http-server": "catalog:",
     "vite-plus": "^0.2.3"
   },
   "engines": {
