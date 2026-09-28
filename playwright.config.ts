@@ -1,5 +1,5 @@
-import { createArgosReporterOptions } from "@argos-ci/playwright/reporter";
-import { defineConfig } from "@playwright/test";
+import { createArgosReporterOptions } from "@argos-ci/playwright/reporter"
+import { defineConfig } from "@playwright/test"
 
 export default defineConfig({
   testDir: "./tests",
@@ -50,7 +50,7 @@ export default defineConfig({
   ],
   webServer: {
     command:
-      "pnpm --filter docs exec vite preview --host 127.0.0.1 --port 4175",
+      "pnpm --filter docs exec vp preview --host 127.0.0.1 --port 4175",
     url: "http://127.0.0.1:4175",
   },
-});
+})
