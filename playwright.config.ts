@@ -1,6 +1,11 @@
 import { createArgosReporterOptions } from "@argos-ci/playwright/reporter"
 import { defineConfig } from "@playwright/test"
 
+const baseURL = process.env.PLAYWRIGHT_BASE_URL
+if (process.env.GITHUB_ACTIONS && !baseURL) {
+  throw new Error("GitHub browser tests require an exact Netlify deployment")
+}
+
 export default defineConfig({
   testDir: "./tests",
   forbidOnly: !!process.env.CI,
@@ -15,7 +20,7 @@ export default defineConfig({
     ],
   ],
   use: {
-    baseURL: "http://127.0.0.1:4175",
+    baseURL: baseURL || "http://127.0.0.1:4175",
     colorScheme: "light",
     reducedMotion: "reduce",
     locale: "nl-NL",
@@ -48,8 +53,11 @@ export default defineConfig({
       },
     },
   ],
-  webServer: {
-    command: "pnpm --filter docs exec vp preview --host 127.0.0.1 --port 4175",
-    url: "http://127.0.0.1:4175",
-  },
+  webServer: baseURL
+    ? undefined
+    : {
+        command:
+          "pnpm --filter docs exec vp preview --host 127.0.0.1 --port 4175",
+        url: "http://127.0.0.1:4175",
+      },
 })
