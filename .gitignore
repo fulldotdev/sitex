@@ -37,6 +37,3 @@ coverage/
 apps/docs/public/r/
 
 # Visual test output
-test-results/
-playwright-report/
-screenshots/
