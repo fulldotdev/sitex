@@ -60,5 +60,6 @@ peerDependencyRules:
     vitest: "*"
 
 allowBuilds:
+  core-js: false
   esbuild: true
   msw: true
