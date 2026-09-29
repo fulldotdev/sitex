@@ -11,6 +11,7 @@ import {
 
 import "@/index.css"
 
+import { Posthog } from "@/components/posthog"
 import { Sidebar1 } from "@/components/blocks/sidebar-1"
 import { ThemeScript } from "@/components/ui/theme-toggle"
 import { globals } from "@/lib/globals"
@@ -34,7 +35,19 @@ export default function BaseLayout({
 }: BaseLayoutProps) {
   return (
     <Layout>
-      <LayoutHead {...head} name={globals.name}>
+      <LayoutHead
+        {...head}
+        name={globals.name}
+        image={
+          head.image || {
+            src: "https://sitex.full.dev/social.png",
+            alt: "SiteX",
+            width: 1200,
+            height: 630,
+            type: "image/png",
+          }
+        }
+      >
         <ThemeScript {...theme} />
       </LayoutHead>
       <LayoutBody>
@@ -48,6 +61,7 @@ export default function BaseLayout({
             {children}
           </LayoutMain>
         </Sidebar1>
+        <Posthog client:idle />
       </LayoutBody>
     </Layout>
   )
