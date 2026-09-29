@@ -20,6 +20,7 @@
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "lucide-react": "catalog:",
+    "posthog-js": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "schema-dts": "catalog:",

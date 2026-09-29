@@ -4,7 +4,7 @@ publish = "apps/docs/dist"
 
 [build.environment]
 NODE_VERSION = "22.18.0"
-PNPM_VERSION = "11.1.2"
+PNPM_VERSION = "11.22.0"
 
 [[redirects]]
 from = "/docs/tsx-pages"
@@ -75,3 +75,9 @@ status = 301
 from = "/docs/ui/*"
 to = "/docs/components/:splat"
 status = 301
+
+[[headers]]
+for = "/*"
+[headers.values]
+X-Content-Type-Options = "nosniff"
+Referrer-Policy = "strict-origin-when-cross-origin"

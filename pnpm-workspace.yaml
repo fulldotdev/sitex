@@ -45,6 +45,7 @@ catalog:
   "@argos-ci/playwright": 7.6.0
   "@playwright/test": 1.63.0
   http-server: 14.1.1
+  posthog-js: 1.434.15
 
 overrides:
   vite: "catalog:"
@@ -59,5 +60,6 @@ peerDependencyRules:
     vitest: "*"
 
 allowBuilds:
+  core-js: false
   esbuild: true
   msw: true
