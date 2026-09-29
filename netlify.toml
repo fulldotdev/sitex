@@ -75,6 +75,3 @@ status = 301
 from = "/docs/ui/*"
 to = "/docs/components/:splat"
 status = 301
-
-[[plugins]]
-package = "./scripts/netlify-ci-deploy"
