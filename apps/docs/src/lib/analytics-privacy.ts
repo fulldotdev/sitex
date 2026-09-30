@@ -9,7 +9,7 @@ export function sanitizeExceptionUrls(event: CaptureResult | null) {
     if (typeof value === "string") {
       return value.replace(
         /https?:\/\/[^\s<>]+/gi,
-        (url) => url.split(/[?#]/, 1)[0]
+        (url) => url.split(/[?#]/, 1)[0].replace(/^(https?:\/\/)[^/]*@/i, "$1")
       )
     }
     if (value && typeof value === "object" && !seen.has(value)) {
