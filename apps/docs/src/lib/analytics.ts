@@ -1,3 +1,4 @@
+import { sanitizeExceptionUrls } from "./analytics-privacy"
 import "posthog-js/dist/exception-autocapture"
 import { ErrorTrackingExtensions } from "posthog-js/dist/extension-bundles"
 import { trackInteractions } from "./analytics-interactions"
@@ -14,7 +15,7 @@ export function startAnalytics() {
     capture_exceptions: {
       capture_unhandled_errors: true,
       capture_unhandled_rejections: true,
-      capture_console_errors: false,
+      capture_console_errors: true,
     },
     capture_performance: false,
     mask_personal_data_properties: true,
@@ -35,6 +36,7 @@ export function startAnalytics() {
       "$session_entry_referrer",
     ],
     loaded: trackInteractions,
+    before_send: sanitizeExceptionUrls,
     capture_pageview: true,
     capture_pageleave: true,
     disable_session_recording: true,
