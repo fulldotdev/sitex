@@ -61,10 +61,12 @@ allowBuilds:
   esbuild: true
   msw: true
 
-# pnpm's supply-chain recommendations (https://pnpm.io/supply-chain-security).
-# blockExoticSubdeps and a one-day minimumReleaseAge are already defaults.
-trustPolicy: no-downgrade
-# A takeover is found within days, so versions older than 30 days are not held to it.
-trustPolicyIgnoreAfter: 43200
-# Fail instead of silently picking an older version when a release is under a day old.
+# Supply-chain protection on top of the pnpm defaults (24h release age, no exotic subdependencies).
+# When only a release under a day old fits, ask (fail in CI) instead of installing it anyway.
 minimumReleaseAgeStrict: true
+# Reject a release published with weaker trust (provenance) than earlier versions.
+# Only releases from the last 7 days are checked, so older ones in existing lockfiles still install.
+trustPolicy: no-downgrade
+trustPolicyIgnoreAfter: 10080
+# Never run .pnpmfile hooks.
+ignorePnpmfile: true
