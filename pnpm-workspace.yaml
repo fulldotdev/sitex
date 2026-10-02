@@ -66,3 +66,5 @@ allowBuilds:
 trustPolicy: no-downgrade
 # A takeover is found within days, so versions older than 30 days are not held to it.
 trustPolicyIgnoreAfter: 43200
+# Fail instead of silently picking an older version when a release is under a day old.
+minimumReleaseAgeStrict: true
