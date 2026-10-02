@@ -3,7 +3,10 @@ command = "pnpm build"
 publish = "apps/docs/dist"
 
 [build.environment]
-NODE_VERSION = "22.18.0"
+NODE_VERSION = "24"
+PNPM_FLAGS = "--frozen-lockfile --ignore-scripts --ignore-pnpmfile"
+pnpm_config_ignore_scripts = "true"
+pnpm_config_ignore_pnpmfile = "true"
 
 [[redirects]]
 from = "/docs/tsx-pages"
