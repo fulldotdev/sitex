@@ -60,3 +60,9 @@ allowBuilds:
   core-js: false
   esbuild: true
   msw: true
+
+# pnpm's supply-chain recommendations (https://pnpm.io/supply-chain-security).
+# blockExoticSubdeps and a one-day minimumReleaseAge are already defaults.
+trustPolicy: no-downgrade
+# A takeover is found within days, so versions older than 30 days are not held to it.
+trustPolicyIgnoreAfter: 43200
