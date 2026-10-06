@@ -21,6 +21,8 @@ env:
 jobs:
   validate:
     name: Validate
+    # On release pull requests both checks below are skipped, so skip the job; the organization Check still runs.
+    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
 
     steps:
@@ -48,5 +50,7 @@ jobs:
         if: github.event_name == 'pull_request' && !startsWith(github.head_ref, 'changeset-release/')
         run: pnpm exec changeset status --since=origin/${{ github.event.pull_request.base.ref }}
 
+      # On pull requests the required organization Check runs pnpm check.
       - name: Check code
+        if: github.event_name == 'push'
         run: pnpm check
