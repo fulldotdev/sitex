@@ -21,6 +21,8 @@ env:
 jobs:
   validate:
     name: Validate
+    # On release pull requests both checks below are skipped, so skip the job; the organization Check still runs.
+    if: ${{ !startsWith(github.head_ref, 'changeset-release/') }}
     runs-on: ubuntu-latest
 
     steps:
