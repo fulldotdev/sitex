@@ -20,8 +20,8 @@ catalog:
   yaml: ^2.9.0
   schema-dts: ^2.0.0
   parse5: ^8.0.1
-  "@changesets/changelog-github": ^0.7.0
-  "@changesets/cli": ^2.31.0
+  "@changesets/changelog-github": ^1.0.1
+  "@changesets/cli": ^3.0.3
   "@tailwindcss/vite": ^4.3.2
   "@types/react": ^19.2.17
   "@types/react-dom": ^19.2.3
