@@ -78,8 +78,14 @@ from = "/docs/ui/*"
 to = "/docs/components/:splat"
 status = 301
 
+[context.production]
+command = "pnpm run check && pnpm build"
+
 [[headers]]
 for = "/*"
 [headers.values]
 X-Content-Type-Options = "nosniff"
 Referrer-Policy = "strict-origin-when-cross-origin"
+
+[context.deploy-preview]
+ignore = "false"
