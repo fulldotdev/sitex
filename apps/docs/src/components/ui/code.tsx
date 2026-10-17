@@ -87,7 +87,7 @@ function Code({ code, lang = "text", className }: CodeProps) {
     <figure
       data-slot="code"
       className={cn(
-        "relative overflow-hidden rounded-md border border-border bg-muted/40 shadow-xs",
+        "relative overflow-hidden rounded-md border border-border bg-card shadow-xs",
         className
       )}
     >

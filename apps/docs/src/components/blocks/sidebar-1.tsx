@@ -93,55 +93,60 @@ function Sidebar1({
         collapsible="offcanvas"
         variant="inset"
       >
-        <SidebarHeader className="flex-col">
-          <SidebarMenuButton
-            render={<a href={logo.href} />}
-            size="lg"
-            variant="default"
-          >
-            <Logo className="gap-2">
-              <LogoImage className="size-6" />
-              <LogoText className="truncate">{logo.label}</LogoText>
-            </Logo>
-          </SidebarMenuButton>
-          {sections.length > 1 ? (
-            <div className="flex gap-1 rounded-lg bg-sidebar-accent/50 p-1">
-              {sections.map((section) => (
-                <a
-                  key={section.href}
-                  href={section.href}
-                  className={cn(
-                    "flex-1 rounded-md px-2 py-1 text-center text-xs font-medium transition-colors",
-                    section === activeSection
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  {section.label}
-                </a>
-              ))}
-            </div>
-          ) : null}
-        </SidebarHeader>
-        <SidebarContent className="mask-[linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)] [-webkit-mask-image:linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)]">
-          {navigation.map((group) => (
-            <SidebarGroup key={group.label}>
-              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
-              <SidebarMenu>
-                {getNavigationItems(group).map((item) => (
-                  <SidebarMenuItem key={item.href}>
-                    <SidebarMenuButton
-                      isActive={normalizePath(item.href) === currentPath}
-                      render={<a href={item.href} />}
-                    >
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
+        <nav
+          aria-label="Site navigation"
+          className="flex min-h-0 flex-1 flex-col"
+        >
+          <SidebarHeader className="flex-col">
+            <SidebarMenuButton
+              render={<a href={logo.href} />}
+              size="lg"
+              variant="default"
+            >
+              <Logo className="gap-2">
+                <LogoImage className="size-6" />
+                <LogoText className="truncate">{logo.label}</LogoText>
+              </Logo>
+            </SidebarMenuButton>
+            {sections.length > 1 ? (
+              <div className="flex gap-1 rounded-lg bg-sidebar-accent/50 p-1">
+                {sections.map((section) => (
+                  <a
+                    key={section.href}
+                    href={section.href}
+                    className={cn(
+                      "flex-1 rounded-md px-2 py-1 text-center text-xs font-medium transition-colors",
+                      section === activeSection
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    )}
+                  >
+                    {section.label}
+                  </a>
                 ))}
-              </SidebarMenu>
-            </SidebarGroup>
-          ))}
-        </SidebarContent>
+              </div>
+            ) : null}
+          </SidebarHeader>
+          <SidebarContent className="mask-[linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)] [-webkit-mask-image:linear-gradient(to_bottom,transparent,black_1rem,black_calc(100%-1rem),transparent)]">
+            {navigation.map((group) => (
+              <SidebarGroup key={group.label}>
+                <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+                <SidebarMenu>
+                  {getNavigationItems(group).map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        isActive={normalizePath(item.href) === currentPath}
+                        render={<a href={item.href} />}
+                      >
+                        <span>{item.label}</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroup>
+            ))}
+          </SidebarContent>
+        </nav>
       </Sidebar>
       <SidebarInset>
         <Header className="h-16 shrink-0 border-b">
