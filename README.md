@@ -13,10 +13,11 @@ packages/sitex/   # @fulldotdev/sitex package source
 ## Scripts
 
 ```bash
-pnpm dev      # run the docs app
-pnpm build    # build all workspace packages/apps
-pnpm check    # format, lint, and typecheck
-pnpm ready    # check and build everything
+pnpm dev             # run the docs app
+pnpm build           # build all workspace packages/apps
+vp run check:build   # typecheck the docs app with the types its build generated
+vp run check:source  # format, lint, and typecheck
+pnpm ready           # check and build everything
 ```
 
 ## Package
