@@ -1,5 +1,5 @@
 [build]
-command = "pnpm build"
+command = "pnpm build && pnpm run check:build"
 publish = "apps/docs/dist"
 
 [build.environment]
@@ -79,7 +79,7 @@ to = "/docs/components/:splat"
 status = 301
 
 [context.production]
-command = "pnpm run check && pnpm build"
+command = "pnpm run check:source && pnpm build && pnpm run check:build"
 
 [[headers]]
 for = "/*"

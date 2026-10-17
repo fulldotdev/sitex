@@ -14,7 +14,7 @@ pnpm dev
 Run these before opening a pull request:
 
 ```bash
-pnpm check
+vp run check:source
 pnpm ready
 ```
 
