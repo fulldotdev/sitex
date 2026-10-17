@@ -41,7 +41,9 @@ function Typography<T extends React.ElementType = "div">({
         "[&[data-size=sm]_h3:not([data-slot])]:text-xl [&[data-size=default]_h3:not([data-slot])]:text-2xl [&[data-size=lg]_h3:not([data-slot])]:text-3xl",
         "[&_h4:not([data-slot])]:scroll-m-20 [&_h4:not([data-slot])]:font-semibold [&_h4:not([data-slot])]:tracking-tight",
         "[&[data-size=sm]_h4:not([data-slot])]:text-lg [&[data-size=default]_h4:not([data-slot])]:text-xl [&[data-size=lg]_h4:not([data-slot])]:text-2xl",
-        "[&_a:not([data-slot])]:font-medium [&_a:not([data-slot])]:text-primary [&_a:not([data-slot])]:underline [&_a:not([data-slot])]:underline-offset-4",
+        // Links take the foreground in dark mode: a primary that carries white
+        // text is too dark to read as body text on a dark background.
+        "[&_a:not([data-slot])]:font-medium [&_a:not([data-slot])]:text-primary dark:[&_a:not([data-slot])]:text-foreground [&_a:not([data-slot])]:underline [&_a:not([data-slot])]:underline-offset-4",
         "[&_p:not([data-slot])]:text-base [&_p:not([data-slot])]:leading-7",
         "[&_blockquote:not([data-slot])]:border-l-2 [&_blockquote:not([data-slot])]:pl-6 [&_blockquote:not([data-slot])]:text-base [&_blockquote:not([data-slot])]:italic",
         "[&_:is(ul,ol):not([data-slot])]:ml-6 [&_:is(ul,ol):not([data-slot])]:text-base [&_ul:not([data-slot])]:list-disc [&_ol:not([data-slot])]:list-decimal [&_:is(ul,ol)>li:not([data-slot])]:mt-2",
@@ -71,7 +73,7 @@ function TypographyA({ className, ...props }: React.ComponentProps<"a">) {
     <a
       data-slot="typography-a"
       className={cn(
-        "font-medium text-primary underline underline-offset-4",
+        "font-medium text-primary underline underline-offset-4 dark:text-foreground",
         className
       )}
       {...props}
