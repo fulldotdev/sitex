@@ -4,12 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "ready": "vp run check:source && vp run build && vp run check:build",
+    "ready": "vp run check && vp run build",
     "dev": "vp run docs#dev",
     "build": "vp run -r build",
-    "check:build": "vp run docs#check:build",
-    "check:source": "vp check && vp run @fulldotdev/sitex#check",
-    "fix:source": "vp check --fix",
+    "check": "vp check && vp run @fulldotdev/sitex#check",
+    "fix": "vp check --fix",
     "preview": "vp run docs#preview",
     "changeset": "changeset",
     "release": "changeset version && pnpm install --lockfile-only && vp fmt",
@@ -24,5 +23,5 @@
   "engines": {
     "node": ">=24.11.0 <25"
   },
-  "packageManager": "pnpm@12.11.2"
+  "packageManager": "pnpm@12.14.0"
 }

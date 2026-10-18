@@ -15,8 +15,7 @@ packages/sitex/   # @fulldotdev/sitex package source
 ```bash
 pnpm dev             # run the docs app
 pnpm build           # build all workspace packages/apps
-vp run check:build   # typecheck the docs app with the types its build generated
-vp run check:source  # format, lint, and typecheck
+vp run check  # format, lint, and typecheck
 pnpm ready           # check and build everything
 ```
 
