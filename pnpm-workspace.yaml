@@ -9,7 +9,6 @@ catalog:
   "@types/node": ^26.1.0
   typescript: ^6.0.3
   vite: npm:@voidzero-dev/vite-plus-core@^0.2.3
-  vitest: npm:@voidzero-dev/vite-plus-test@latest
   vite-plus: ^0.2.3
   "@base-ui/react": ^1.6.0
   prettier: ^3.8.3
@@ -46,15 +45,12 @@ catalog:
 
 overrides:
   vite: "catalog:"
-  vitest: "catalog:"
 
 peerDependencyRules:
   allowAny:
     - vite
-    - vitest
   allowedVersions:
     vite: "*"
-    vitest: "*"
 
 allowBuilds:
   core-js: false
@@ -70,3 +66,9 @@ trustPolicy: no-downgrade
 trustPolicyIgnoreAfter: 10080
 # Never run .pnpmfile hooks.
 ignorePnpmfile: true
+
+# The bundled Vite core loads its native binding from vite-plus.
+packageExtensions:
+  "@voidzero-dev/vite-plus-core@0.2.3":
+    peerDependencies:
+      vite-plus: 0.2.3
