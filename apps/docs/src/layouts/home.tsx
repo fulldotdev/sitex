@@ -1,4 +1,5 @@
 import type { LayoutProps } from "@fulldotdev/sitex"
+import type { WebSite, WithContext } from "schema-dts"
 
 import { Features1 } from "@/components/blocks/features-1"
 import { Hero1 } from "@/components/blocks/hero-1"
@@ -29,13 +30,26 @@ export default function HomeLayout({
   type,
   updatedAt,
 }: LayoutProps<HomeData>) {
+  const website: WithContext<WebSite> = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: title,
+    description,
+    url,
+    publisher: {
+      "@type": "Organization",
+      name: "Fulldev",
+      url: "https://full.dev",
+    },
+  }
+
   return (
     <BaseLayout
       title={title}
       description={description}
       headings={headings}
       image={image}
-      jsonLd={jsonLd}
+      jsonLd={jsonLd ?? website}
       locale={locale}
       path={path}
       publishedAt={publishedAt}

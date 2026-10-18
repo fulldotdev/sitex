@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "vp dev --host 127.0.0.1 --port 4323",
-    "build": "shadcn build && vp build && tsc --noEmit",
+    "build": "shadcn build && vp build",
+    "check:build": "tsc --noEmit",
     "preview": "vp preview --host 127.0.0.1 --port 4323",
     "registry:build": "shadcn build"
   },
@@ -36,6 +37,7 @@
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
-    "vite-plus": "catalog:"
+    "vite-plus": "catalog:",
+    "yaml": "catalog:"
   }
 }
