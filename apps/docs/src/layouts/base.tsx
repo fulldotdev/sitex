@@ -15,6 +15,7 @@ import { Posthog } from "@/components/posthog"
 import { Sidebar1 } from "@/components/blocks/sidebar-1"
 import { ThemeScript } from "@/components/ui/theme-toggle"
 import { globals } from "@/lib/globals"
+import { markdownPath } from "@/lib/markdown"
 import { theme } from "@/lib/theme"
 
 export type BaseLayoutProps = LayoutHeadProps & {
@@ -41,7 +42,7 @@ export default function BaseLayout({
         image={
           head.image || {
             src: "https://sitex.full.dev/social.png",
-            alt: "SiteX",
+            alt: globals.name,
             width: 1200,
             height: 630,
             type: "image/png",
@@ -49,6 +50,7 @@ export default function BaseLayout({
         }
       >
         <ThemeScript {...theme} />
+        <link rel="alternate" type="text/markdown" href={markdownPath(path)} />
       </LayoutHead>
       <LayoutBody>
         <Sidebar1

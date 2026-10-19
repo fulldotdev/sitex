@@ -4,6 +4,7 @@ import type { WebSite, WithContext } from "schema-dts"
 import { Features1 } from "@/components/blocks/features-1"
 import { Hero1 } from "@/components/blocks/hero-1"
 import BaseLayout from "@/layouts/base"
+import { globals } from "@/lib/globals"
 
 type HomeData = {
   hero: {
@@ -30,13 +31,15 @@ export default function HomeLayout({
   type,
   updatedAt,
 }: LayoutProps<HomeData>) {
+  // Fulldev made Sitex; as creator rather than publisher it does not read
+  // as a second name for the site itself.
   const website: WithContext<WebSite> = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: title,
+    name: globals.name,
     description,
     url,
-    publisher: {
+    creator: {
       "@type": "Organization",
       name: "Fulldev",
       url: "https://full.dev",

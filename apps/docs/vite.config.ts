@@ -1,6 +1,6 @@
 import type { Plugin } from "vite-plus"
 
-import { readFile } from "node:fs/promises"
+import { glob, readFile } from "node:fs/promises"
 import path from "node:path"
 
 import { defineConfig } from "vite-plus"
@@ -9,7 +9,9 @@ import { parse } from "yaml"
 import tailwindcss from "@tailwindcss/vite"
 import react from "@vitejs/plugin-react"
 
+import { pageFileToRoutePath } from "../../packages/sitex/src/router/runtime"
 import { sitex } from "../../packages/sitex/src/vite/plugin"
+import { markdownPath } from "./src/lib/markdown"
 
 const siteUrl = "https://sitex.full.dev"
 
@@ -27,13 +29,23 @@ export default defineConfig({
       },
     }),
     tailwindcss(),
-    llmsTxt(),
+    markdown(),
   ],
 })
 
-type Frontmatter = { title: string; description: string }
+type Frontmatter = {
+  title: string
+  description: string
+  hero?: {
+    title: string
+    description: string
+    buttons?: { href: string; label: string }[]
+  }
+  features?: { title: string; description: string }[]
+}
 
 type Globals = {
+  name: string
   sidebar: {
     sections: {
       navigation: { label: string; links: { href: string }[] }[]
@@ -41,12 +53,18 @@ type Globals = {
   }
 }
 
-/** Builds /llms.txt from the docs navigation and each page's frontmatter. */
-function llmsTxt(): Plugin {
+/**
+ * Builds each page's Markdown version and /llms.txt. A page's MDX file is
+ * served as written at its path with .md (src/lib/markdown.ts); the home
+ * layout renders its hero and features from the frontmatter, so they follow
+ * the file as Markdown. /llms.txt lists the docs navigation with links to
+ * the Markdown versions.
+ */
+function markdown(): Plugin {
   let root = ""
 
   return {
-    name: "docs:llms-txt",
+    name: "docs:markdown",
     apply: "build",
     applyToEnvironment: (environment) => environment.name === "client",
     configResolved(config) {
@@ -54,30 +72,55 @@ function llmsTxt(): Plugin {
     },
     async generateBundle() {
       const read = (file: string) => readFile(path.join(root, file), "utf8")
-      const readPage = async (href: string) => {
-        const base = path.join("src/pages", href === "/" ? "index" : href)
-        const source = await read(`${base}.mdx`).catch(() =>
-          read(path.join(base, "index.mdx"))
-        )
-        const frontmatter = /^---\r?\n([\s\S]*?)\r?\n---/.exec(source)?.[1]
+      const pages = new Map<string, Frontmatter>()
 
-        return parse(frontmatter ?? "") as Frontmatter
+      for await (const file of glob("src/pages/**/*.mdx", { cwd: root })) {
+        const source = await read(file)
+        const page = parse(
+          /^---\r?\n([\s\S]*?)\r?\n---/.exec(source)?.[1] ?? ""
+        ) as Frontmatter
+        const href = pageFileToRoutePath(file)
+        const rendered = [
+          page.hero && `# ${page.hero.title}`,
+          page.hero?.description,
+          ...(page.hero?.buttons ?? []).map(
+            (button) => `[${button.label}](${new URL(button.href, siteUrl)})`
+          ),
+          ...(page.features ?? []).map(
+            (feature) => `## ${feature.title}\n\n${feature.description}`
+          ),
+        ].filter(Boolean)
+
+        pages.set(href, page)
+        this.emitFile({
+          type: "asset",
+          fileName: markdownPath(href).slice(1),
+          source: rendered.length
+            ? `${source.trimEnd()}\n\n${rendered.join("\n\n")}\n`
+            : source,
+        })
       }
 
-      const home = await readPage("/")
       const globals = parse(await read("src/globals/index.yaml")) as Globals
       const groups = globals.sidebar.sections.flatMap(
         (section) => section.navigation
       )
-      const lines = [`# ${home.title}`, "", `> ${home.description}`]
+      const lines = [
+        `# ${globals.name}`,
+        "",
+        `> ${pages.get("/")?.description}`,
+        "",
+        `Every page has a Markdown version: add \`.md\` to its URL. The homepage's is ${siteUrl}/index.md.`,
+      ]
 
       for (const group of groups) {
         lines.push("", `## ${group.label}`, "")
 
         for (const { href } of group.links) {
-          const page = await readPage(href)
+          const page = pages.get(href)
+          if (!page) throw new Error(`No page for navigation link ${href}`)
           lines.push(
-            `- [${page.title}](${siteUrl}${href}): ${page.description}`
+            `- [${page.title}](${siteUrl}${markdownPath(href)}): ${page.description}`
           )
         }
       }

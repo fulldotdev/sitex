@@ -86,7 +86,7 @@ description: "My first Sitex page."
 Hello from Sitex.
 ```
 
-Sitex adds the missing head defaults (charset, viewport, canonical, `og:url`, favicon) and hoists JSON-LD into the head. `@fulldotdev/sitex` itself exports types only; ready-made layout and content components install from the Sitex shadcn registry at https://sitex.full.dev/docs/components.
+Sitex adds the missing head defaults (charset, viewport, canonical, `og:url`, favicon) and hoists JSON-LD into the head. `@fulldotdev/sitex` itself exports types only; ready-made layout and content components come from Fulldev UI's React components at https://ui.full.dev/react/.
 
 ## Globals
 

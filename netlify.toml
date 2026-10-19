@@ -45,32 +45,89 @@ status = 301
 
 [[redirects]]
 from = "/docs/rendering-and-assets"
-to = "/docs/components"
+to = "/docs/rendering"
 status = 301
 
 [[redirects]]
 from = "/docs/island-rendering"
-to = "/docs/components"
+to = "/docs/rendering"
+status = 301
+
+# The component docs moved to Fulldev UI's React components: each page to
+# its match there, the rest to the start of the React docs.
+[[redirects]]
+from = "/docs/components"
+to = "https://ui.full.dev/react/components/"
 status = 301
 
 [[redirects]]
-from = "/docs/rendering"
-to = "/docs/components"
+from = "/docs/components/banner"
+to = "https://ui.full.dev/react/components/banner/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/header"
+to = "https://ui.full.dev/react/components/header/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/layout"
+to = "https://ui.full.dev/react/components/layout/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/marquee"
+to = "https://ui.full.dev/react/components/marquee/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/price"
+to = "https://ui.full.dev/react/components/price/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/rating"
+to = "https://ui.full.dev/react/components/rating/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/section"
+to = "https://ui.full.dev/react/components/section/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/theme-toggle"
+to = "https://ui.full.dev/react/components/theme-toggle/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/toc"
+to = "https://ui.full.dev/react/components/toc/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/typography"
+to = "https://ui.full.dev/react/components/typography/"
+status = 301
+
+[[redirects]]
+from = "/docs/components/*"
+to = "https://ui.full.dev/react/"
 status = 301
 
 [[redirects]]
 from = "/docs/ui"
-to = "/docs/components"
+to = "https://ui.full.dev/react/"
 status = 301
 
 [[redirects]]
 from = "/docs/ui/installation"
-to = "/docs/components"
+to = "https://ui.full.dev/react/docs/installation/"
 status = 301
 
 [[redirects]]
 from = "/docs/ui/components"
-to = "/docs/components"
+to = "https://ui.full.dev/react/components/"
 status = 301
 
 [[redirects]]
@@ -87,6 +144,18 @@ for = "/*"
 X-Content-Type-Options = "nosniff"
 Referrer-Policy = "strict-origin-when-cross-origin"
 Content-Security-Policy = "frame-ancestors 'self'"
+
+# Build files have a hash in their name, so browsers can keep them.
+[[headers]]
+for = "/assets/*"
+[headers.values]
+Cache-Control = "public, max-age=31536000, immutable"
+
+# The Markdown version of every page is for agents, not for search results.
+[[headers]]
+for = "/*.md"
+[headers.values]
+X-Robots-Tag = "noindex"
 
 [context.deploy-preview]
 ignore = "false"
