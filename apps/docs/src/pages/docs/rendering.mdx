@@ -1,0 +1,31 @@
+---
+layout: "doc"
+title: "Rendering"
+description: "Static rendering by default, client directives for islands, and prefetched navigation."
+---
+
+Components are plain React. Everything renders to static HTML at build time, and Sitex follows each page's module graph to include exactly the CSS that page imports. Pages ship zero JavaScript unless a component opts in. For ready-made components, such as sections, typography and a table of contents, see [Fulldev UI's React components](https://ui.full.dev/react/).
+
+## Client Directives
+
+Imported React components opt into browser rendering with a `client:*` directive. Directives live in TSX (layouts, blocks, components), never in MDX bodies, and never on HTML elements or same-file components.
+
+```tsx
+import Search from "@/components/search"
+
+export default function Header() {
+  return <Search client:load />
+}
+```
+
+1. `client:load` hydrates immediately. For controls that must work right away.
+2. `client:idle` hydrates when the browser is idle. For page chrome like sidebars.
+3. `client:visible` hydrates when scrolled into view. For below-the-fold widgets.
+4. `client:media="(min-width: 64rem)"` hydrates when the media query matches.
+5. `client:only` skips static rendering and renders in the browser only.
+
+Island props must be JSON-serializable: functions, symbols, React elements, and cyclic values throw at build time. Children pass through as static HTML; a nested `client:*` component inside them becomes its own independent island. Components that share client state belong inside one island root.
+
+## Prefetch
+
+Navigation is prefetched by default: Sitex injects speculation rules so supporting browsers prerender links on hover (instant navigation), plus a small hover-prefetch script for the rest. Disable it with `sitex({ prefetch: false })`, or per link tree with a `data-no-prefetch` attribute.
