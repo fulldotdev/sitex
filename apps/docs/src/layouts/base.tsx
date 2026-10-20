@@ -49,6 +49,8 @@ export default function BaseLayout({
           }
         }
       >
+        <link rel="icon" href="/favicon.png" type="image/png" sizes="96x96" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         <ThemeScript {...theme} />
         <link rel="alternate" type="text/markdown" href={markdownPath(path)} />
       </LayoutHead>
