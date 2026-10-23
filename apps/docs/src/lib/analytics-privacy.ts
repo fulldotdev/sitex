@@ -12,6 +12,7 @@ export function sanitizeEventUrls(event: CaptureResult | null) {
       if (typeof nested === "string" && /^https?:\/\//i.test(nested)) {
         try {
           const url = new URL(nested)
+          if (/referrer/i.test(key)) url.pathname = "/"
           url.search = ""
           url.hash = ""
           properties[key] = url.href
