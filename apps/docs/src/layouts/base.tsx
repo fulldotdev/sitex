@@ -34,24 +34,33 @@ export default function BaseLayout({
   url: _url,
   ...head
 }: BaseLayoutProps) {
+  const image = head.image || {
+    src: "https://sitex.full.dev/social.png",
+    alt: globals.name,
+    width: 1200,
+    height: 630,
+    type: "image/png",
+  }
+  const imageProps = typeof image === "string" ? { src: image } : image
+  const socialImageUrl = new URL(imageProps.src, "https://sitex.full.dev").href
+
   return (
     <Layout>
       <LayoutHead
         {...head}
         name={globals.name}
-        image={
-          head.image || {
-            src: "https://sitex.full.dev/social.png",
-            alt: globals.name,
-            width: 1200,
-            height: 630,
-            type: "image/png",
-          }
-        }
+        image={{ ...imageProps, src: socialImageUrl }}
+        twitterCard={head.twitterCard || "summary_large_image"}
       >
         <link rel="icon" href="/favicon.png" type="image/png" sizes="96x96" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         <ThemeScript {...theme} />
+        <meta name="twitter:image" content={socialImageUrl} />
+        {imageProps.alt && (
+          <meta name="twitter:image:alt" content={imageProps.alt} />
+        )}
+        <meta name="twitter:title" content={head.title} />
+        <meta name="twitter:description" content={head.description} />
         <link rel="alternate" type="text/markdown" href={markdownPath(path)} />
       </LayoutHead>
       <LayoutBody>
