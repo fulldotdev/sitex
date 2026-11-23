@@ -14,7 +14,6 @@ export default defineConfig({
     ignorePatterns: [
       "apps/*/dist/**",
       "apps/docs/src/hooks/use-mobile.ts",
-      "packages/sitex/**",
       "packages/*/dist/**",
       "**/.sitex/**",
     ],
