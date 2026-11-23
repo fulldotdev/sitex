@@ -18,7 +18,12 @@ function scheduleAnalytics() {
 
 export function Posthog() {
   useEffect(() => {
-    if (started || window.location.hostname !== "sitex.full.dev") return
+    if (
+      navigator.webdriver ||
+      started ||
+      window.location.hostname !== "sitex.full.dev"
+    )
+      return
     started = true
     if (document.readyState === "complete") scheduleAnalytics()
     else window.addEventListener("load", scheduleAnalytics, { once: true })
